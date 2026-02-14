@@ -5,20 +5,59 @@ type AppRow = {
   id: string;
   status: string;
   updated_at: string;
-  jobs: {
-    id: string;
-    title: string;
-    company: string | null;
-    location: string | null;
-    source: string;
-    url: string;
-  } | null;
+  jobs:
+    | {
+        id: string;
+        title: string;
+        company: string | null;
+        location: string | null;
+        source: string;
+        url: string;
+      }
+    | {
+        id: string;
+        title: string;
+        company: string | null;
+        location: string | null;
+        source: string;
+        url: string;
+      }[]
+    | null;
 };
+
+type JobRow = {
+  id: string;
+  title: string;
+  company: string | null;
+  location: string | null;
+  source: string;
+  url: string;
+};
+
+type NormalizedAppRow = {
+  id: string;
+  status: string;
+  updated_at: string;
+  jobs: JobRow | null;
+};
+
+function normalizeJob(jobs: AppRow["jobs"]): JobRow | null {
+  if (!jobs) return null;
+  return Array.isArray(jobs) ? jobs[0] ?? null : jobs;
+}
 
 type MatchRow = {
   job_id: string;
   score: number;
 };
+
+const normalizeApps = (apps: AppRow[] | null): NormalizedAppRow[] =>
+  (apps ?? []).map((app) => ({
+    id: app.id,
+    status: app.status,
+    updated_at: app.updated_at,
+    jobs: normalizeJob(app.jobs)
+  }));
 
 export default async function DashboardPage() {
   const sb = await supabaseServer();
@@ -41,7 +80,9 @@ export default async function DashboardPage() {
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false });
 
-  const jobIds = ((apps ?? []) as AppRow[])
+  const typedApps = normalizeApps((apps ?? null) as unknown as AppRow[] | null);
+
+  const jobIds = typedApps
     .map((row) => row.jobs?.id)
     .filter((id): id is string => Boolean(id));
 
@@ -53,7 +94,9 @@ export default async function DashboardPage() {
       .eq("user_id", user.id)
       .in("job_id", jobIds);
 
-    matchMap = new Map((matches ?? []).map((m) => [(m as MatchRow).job_id, (m as MatchRow).score]));
+    matchMap = new Map(
+      ((matches ?? []) as unknown as MatchRow[]).map((m) => [m.job_id, m.score])
+    );
   }
 
   return (
@@ -79,7 +122,7 @@ export default async function DashboardPage() {
             </tr>
           </thead>
           <tbody>
-            {(apps as AppRow[] | null)?.map((app) => {
+            {typedApps.map((app) => {
               const job = app.jobs;
               if (!job) return null;
 
