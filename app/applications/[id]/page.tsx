@@ -39,13 +39,6 @@ type JobData = {
   description: string | null;
 };
 
-type AppViewData = {
-  id: string;
-  status: string;
-  notes: string | null;
-  jobs: JobData | null;
-};
-
 type DraftData = {
   cover_letter: string;
   answers: Record<string, string>;
@@ -88,7 +81,8 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
 
   if (!app) notFound();
 
-  const job = normalizeJob((app as AppData).jobs);
+  const typedApp = app as AppData;
+  const job = normalizeJob(typedApp.jobs);
   if (!job) notFound();
 
   const [{ data: draft }, { data: match }] = await Promise.all([
@@ -125,7 +119,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
       </p>
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <h2>Status: {(app as AppViewData).status}</h2>
+        <h2>Status: {typedApp.status}</h2>
         <form action={`/api/applications/${id}/draft`} method="post" style={{ display: "inline-block", marginRight: 8 }}>
           <button type="submit">Generate / Refresh Draft</button>
         </form>
