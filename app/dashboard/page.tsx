@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 
 type RawJob = {
@@ -69,17 +70,7 @@ export default async function DashboardPage() {
   } = await sb.auth.getUser();
 
   if (!user) {
-    return (
-      <main className="auth-wrap">
-        <section className="auth-card">
-          <h1>Job Application Tracker</h1>
-          <p className="small">Sign in to view your saved jobs, drafts, and application status board.</p>
-          <Link className="primary-link" href="/login">
-            Go to Login
-          </Link>
-        </section>
-      </main>
-    );
+    redirect("/login");
   }
 
   const { data: apps } = await sb
