@@ -1,31 +1,7 @@
 import Link from "next/link";
 import { supabaseServer } from "@/lib/supabase/server";
 
-type AppRow = {
-  id: string;
-  status: string;
-  updated_at: string;
-  jobs:
-    | {
-        id: string;
-        title: string;
-        company: string | null;
-        location: string | null;
-        source: string;
-        url: string;
-      }
-    | {
-        id: string;
-        title: string;
-        company: string | null;
-        location: string | null;
-        source: string;
-        url: string;
-      }[]
-    | null;
-};
-
-type JobRow = {
+type RawJob = {
   id: string;
   title: string;
   company: string | null;
@@ -34,30 +10,57 @@ type JobRow = {
   url: string;
 };
 
-type NormalizedAppRow = {
+type RawApplication = {
   id: string;
-  status: string;
+  status: "DRAFT" | "READY_TO_REVIEW" | "APPLIED" | "ARCHIVED" | string;
   updated_at: string;
-  jobs: JobRow | null;
+  jobs: RawJob | RawJob[] | null;
 };
 
-function normalizeJob(jobs: AppRow["jobs"]): JobRow | null {
-  if (!jobs) return null;
-  return Array.isArray(jobs) ? jobs[0] ?? null : jobs;
-}
+type ApplicationRow = {
+  id: string;
+  status: "DRAFT" | "READY_TO_REVIEW" | "APPLIED" | "ARCHIVED" | string;
+  updated_at: string;
+  job: RawJob | null;
+};
 
 type MatchRow = {
   job_id: string;
   score: number;
 };
 
-const normalizeApps = (apps: AppRow[] | null): NormalizedAppRow[] =>
-  (apps ?? []).map((app) => ({
-    id: app.id,
-    status: app.status,
-    updated_at: app.updated_at,
-    jobs: normalizeJob(app.jobs)
+const COLUMNS: Array<{
+  key: "DRAFT" | "READY_TO_REVIEW" | "APPLIED" | "ARCHIVED";
+  label: string;
+}> = [
+  { key: "DRAFT", label: "Draft" },
+  { key: "READY_TO_REVIEW", label: "Ready to Review" },
+  { key: "APPLIED", label: "Applied" },
+  { key: "ARCHIVED", label: "Archived" }
+];
+
+function normalizeJob(job: RawApplication["jobs"]): RawJob | null {
+  if (!job) return null;
+  return Array.isArray(job) ? job[0] ?? null : job;
+}
+
+function normalizeApplications(rows: RawApplication[] | null): ApplicationRow[] {
+  return (rows ?? []).map((row) => ({
+    id: row.id,
+    status: row.status,
+    updated_at: row.updated_at,
+    job: normalizeJob(row.jobs)
   }));
+}
+
+function formatDate(iso: string) {
+  const dt = new Date(iso);
+  if (Number.isNaN(dt.getTime())) return "";
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric"
+  }).format(dt);
+}
 
 export default async function DashboardPage() {
   const sb = await supabaseServer();
@@ -67,9 +70,14 @@ export default async function DashboardPage() {
 
   if (!user) {
     return (
-      <main className="container">
-        <h1>Job Application Tracker</h1>
-        <p className="small">Sign in with Supabase Auth to load your applications.</p>
+      <main className="auth-wrap">
+        <section className="auth-card">
+          <h1>Job Application Tracker</h1>
+          <p className="small">Sign in to view your saved jobs, drafts, and application status board.</p>
+          <Link className="primary-link" href="/login">
+            Go to Login
+          </Link>
+        </section>
       </main>
     );
   }
@@ -80,11 +88,8 @@ export default async function DashboardPage() {
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false });
 
-  const typedApps = normalizeApps((apps ?? null) as unknown as AppRow[] | null);
-
-  const jobIds = typedApps
-    .map((row) => row.jobs?.id)
-    .filter((id): id is string => Boolean(id));
+  const rows = normalizeApplications((apps ?? null) as unknown as RawApplication[] | null);
+  const jobIds = rows.map((r) => r.job?.id).filter((id): id is string => Boolean(id));
 
   let matchMap = new Map<string, number>();
   if (jobIds.length) {
@@ -94,59 +99,90 @@ export default async function DashboardPage() {
       .eq("user_id", user.id)
       .in("job_id", jobIds);
 
-    matchMap = new Map(
-      ((matches ?? []) as unknown as MatchRow[]).map((m) => [m.job_id, m.score])
-    );
+    matchMap = new Map(((matches ?? []) as unknown as MatchRow[]).map((m) => [m.job_id, m.score]));
+  }
+
+  const grouped = new Map<string, ApplicationRow[]>();
+  for (const col of COLUMNS) grouped.set(col.key, []);
+
+  for (const row of rows) {
+    if (!grouped.has(row.status)) grouped.set(row.status, []);
+    grouped.get(row.status)?.push(row);
   }
 
   return (
-    <main className="container">
-      <h1>Job Applications</h1>
-      <p className="small">Status flow: DRAFT -&gt; READY_TO_REVIEW -&gt; APPLIED -&gt; ARCHIVED</p>
+    <main className="job-shell">
+      <aside className="job-sidebar">
+        <div className="job-brand">JT</div>
+        <div className="nav-dot active" />
+        <div className="nav-dot" />
+        <div className="nav-dot" />
+        <div className="nav-dot" />
+      </aside>
 
-      <div style={{ margin: "12px 0 16px" }}>
-        <Link href="/jobs/new">+ Add Job</Link>
-      </div>
+      <section className="job-content">
+        <header className="job-topbar">
+          <nav className="job-tabs">
+            <span className="tab active">Application Board</span>
+            <span className="tab">Saved Searches</span>
+            <span className="tab">Weekly Goal</span>
+          </nav>
+          <div className="top-actions">
+            <Link className="add-btn" href="/jobs/new">
+              + Add Job
+            </Link>
+            <form action="/api/auth/logout" method="post">
+              <button className="logout-btn" type="submit">
+                Sign Out
+              </button>
+            </form>
+          </div>
+        </header>
 
-      <div className="card">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Role</th>
-              <th>Company</th>
-              <th>Location</th>
-              <th>Source</th>
-              <th>Match</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {typedApps.map((app) => {
-              const job = app.jobs;
-              if (!job) return null;
+        <div className="board-scroll">
+          {COLUMNS.map((col) => {
+            const cards = grouped.get(col.key) ?? [];
+            return (
+              <section key={col.key} className="board-column">
+                <div className="column-head">
+                  <h2>{col.label}</h2>
+                  <span>{cards.length}</span>
+                </div>
 
-              const score = matchMap.get(job.id);
-              return (
-                <tr key={app.id}>
-                  <td>{job.title}</td>
-                  <td>{job.company ?? "-"}</td>
-                  <td>{job.location ?? "-"}</td>
-                  <td>{job.source}</td>
-                  <td>{typeof score === "number" ? `${score}%` : "-"}</td>
-                  <td>{app.status}</td>
-                  <td>
-                    <a href={job.url} target="_blank" rel="noreferrer">
-                      Open Apply
-                    </a>{" "}
-                    | <Link href={`/applications/${app.id}`}>Review Draft</Link>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                <div className="column-list">
+                  {cards.map((item) => {
+                    const job = item.job;
+                    if (!job) return null;
+                    const score = matchMap.get(job.id);
+
+                    return (
+                      <article key={item.id} className="job-card-panel">
+                        <p className="job-title">{job.title}</p>
+                        <p className="job-company">{job.company ?? "Unknown Company"}</p>
+                        <p className="job-meta">
+                          {job.location ?? "Location not set"} | {job.source}
+                        </p>
+
+                        <div className="pill-row">
+                          <span className="pill">{typeof score === "number" ? `${score}% match` : "No score yet"}</span>
+                          <span className="pill subtle">{formatDate(item.updated_at)}</span>
+                        </div>
+
+                        <div className="card-actions">
+                          <a href={job.url} target="_blank" rel="noreferrer">
+                            Open Apply
+                          </a>
+                          <Link href={`/applications/${item.id}`}>Review</Link>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      </section>
     </main>
   );
 }
