@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Job Tracker Saver",
+  "version": "1.0.0",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": [
+    "https://*.linkedin.com/*",
+    "https://*.indeed.com/*",
+    "https://*.glassdoor.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.linkedin.com/*",
+        "https://*.indeed.com/*",
+        "https://*.glassdoor.com/*"
+      ],
+      "js": ["content.js"]
+    }
+  ]
+}

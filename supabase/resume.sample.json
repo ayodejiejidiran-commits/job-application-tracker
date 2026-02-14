@@ -1,0 +1,17 @@
+{
+  "name": "Your Name",
+  "yearsExp": 3,
+  "summary": "Product-focused professional with experience delivering measurable improvements.",
+  "skills": ["SQL", "APIs", "Jira", "Confluence", "Figma"],
+  "competencies": ["Roadmapping", "User Stories", "Stakeholder Management", "Agile"],
+  "experiences": [
+    {
+      "company": "Company A",
+      "title": "Product Manager",
+      "bullets": [
+        "Led cross-functional delivery for a customer-facing feature and improved engagement by 12%.",
+        "Used SQL and analytics dashboards to prioritize backlog decisions."
+      ]
+    }
+  ]
+}
