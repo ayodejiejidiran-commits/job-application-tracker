@@ -88,9 +88,9 @@ function startOfWeekIso() {
 export default async function DashboardPage({
   searchParams
 }: {
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const params = searchParams ?? {};
+  const params = (await searchParams) ?? {};
 
   const paramValue = (key: string) => {
     const value = params[key];
