@@ -48,6 +48,10 @@ It keeps you in review control and supports one-click workflow from the tracker 
 - Use `supabase/resume.sample.json` as your template.
 - Insert into `resume_versions` for your user ID:
   - `insert into resume_versions (user_id, label, resume_json) values ('<YOUR_AUTH_USER_ID>', 'default', '<JSON>'::jsonb);`
+- Or upload a PDF in the app:
+  - Go to `/criteria`
+  - Use **Resume Upload**
+  - The app extracts `resume_json`, stores it in `resume_versions`, and auto-creates `job_criteria` if missing.
 
 ## Deploy
 - Push to GitHub and import into Vercel

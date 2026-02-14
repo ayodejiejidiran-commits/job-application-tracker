@@ -18,10 +18,12 @@ export function FindJobsButton() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string>("");
+  const [needsResume, setNeedsResume] = useState(false);
 
   async function runDiscovery() {
     setLoading(true);
     setStatus("Running discovery...");
+    setNeedsResume(false);
 
     try {
       const response = await fetch("/api/jobs/discover", {
@@ -35,6 +37,9 @@ export function FindJobsButton() {
       if (!response.ok) {
         if (response.status === 429) {
           setStatus(`Rate limited. Try again after ${payload.next_allowed_at ?? "later"}.`);
+        } else if (response.status === 400 && (payload.error ?? "").includes("No resume profile found")) {
+          setStatus("Resume profile missing. Upload your PDF on Job Criteria, then run Find Jobs again.");
+          setNeedsResume(true);
         } else {
           setStatus(payload.error ?? "Discovery failed.");
         }
@@ -61,6 +66,7 @@ export function FindJobsButton() {
         {loading ? "Finding..." : "Find Jobs"}
       </button>
       {status ? <p className="small" style={{ marginTop: 6 }}>{status}</p> : null}
+      {needsResume ? <a className="small" href="/criteria">Go to Job Criteria</a> : null}
     </div>
   );
 }

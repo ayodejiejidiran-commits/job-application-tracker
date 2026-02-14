@@ -53,11 +53,13 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, summary });
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Discovery failed";
+    const status = message.includes("No resume profile found") ? 400 : 500;
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : "Discovery failed"
+        error: message
       },
-      { status: 500 }
+      { status }
     );
   }
 }

@@ -178,16 +178,26 @@ export async function parseLatestResumePdf(options?: {
 
   const directoryPdfs = (await Promise.all(dirs.map((dir) => listPdfFilesInDir(dir)))).flat();
 
-  const candidates = [...new Set([...manual, ...envPaths, ...directoryPdfs])];
-  const existing = [] as string[];
-
-  for (const candidate of candidates) {
-    if (await pathExists(candidate)) existing.push(candidate);
+  const manualExisting = [] as string[];
+  for (const candidate of manual) {
+    if (await pathExists(candidate)) manualExisting.push(candidate);
   }
 
-  if (!existing.length) return null;
+  let picked: string | null = null;
+  if (manualExisting.length) {
+    picked = await pickNewest(manualExisting);
+  } else {
+    const candidates = [...new Set([...envPaths, ...directoryPdfs])];
+    const existing = [] as string[];
 
-  const picked = await pickNewest(existing);
+    for (const candidate of candidates) {
+      if (await pathExists(candidate)) existing.push(candidate);
+    }
+
+    if (!existing.length) return null;
+    picked = await pickNewest(existing);
+  }
+
   if (!picked) return null;
 
   const buffer = await fs.readFile(picked);

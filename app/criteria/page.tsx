@@ -12,7 +12,15 @@ type CriteriaRow = {
   exclude_keywords: string[] | null;
 } | null;
 
-export default async function CriteriaPage() {
+export default async function CriteriaPage({
+  searchParams
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = (await searchParams) ?? {};
+  const resumeUploaded = (Array.isArray(params.resume_uploaded) ? params.resume_uploaded[0] : params.resume_uploaded) === "1";
+  const resumeError = Array.isArray(params.resume_error) ? params.resume_error[0] : params.resume_error;
+
   const sb = await supabaseServer();
   const {
     data: { user }
@@ -39,6 +47,16 @@ export default async function CriteriaPage() {
       <p className="small">
         Matching uses this criteria + your years of experience + resume evidence. Keep keywords factual to avoid exaggerated drafts.
       </p>
+      {resumeUploaded ? <p className="small">Resume uploaded. Discovery will now use your extracted profile.</p> : null}
+      {resumeError ? <p className="small" style={{ color: "#8b1e1e" }}>{resumeError}</p> : null}
+
+      <form className="card" action="/api/resume/upload" method="post" encType="multipart/form-data" style={{ marginBottom: 16 }}>
+        <h2 style={{ marginTop: 0 }}>Resume Upload</h2>
+        <p className="small">Upload a one-page PDF so discovery can auto-generate criteria and match jobs to your real experience.</p>
+        <label htmlFor="resume">Resume PDF</label>
+        <input id="resume" name="resume" type="file" accept="application/pdf" required />
+        <button type="submit">Upload Resume</button>
+      </form>
 
       <form className="card" action="/api/criteria" method="post">
         <label htmlFor="titles">Target Titles (comma separated)</label>
