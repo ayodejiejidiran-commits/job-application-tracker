@@ -1,4 +1,4 @@
-type Criteria = {
+export type Criteria = {
   titles: string[];
   locations: string[];
   remote_only: boolean;
@@ -8,7 +8,7 @@ type Criteria = {
   exclude_keywords: string[];
 };
 
-type Job = {
+export type Job = {
   title: string;
   location?: string | null;
   description?: string | null;
@@ -52,4 +52,8 @@ export function scoreJob(job: Job, criteria: Criteria, yearsExp: number) {
   }
 
   return Math.max(0, score);
+}
+
+export function clampMatchScore(score: number) {
+  return Math.max(0, Math.min(100, Math.round(score)));
 }

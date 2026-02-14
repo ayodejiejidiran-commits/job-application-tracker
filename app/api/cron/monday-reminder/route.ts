@@ -25,10 +25,21 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: true, users: 0 });
   }
 
+  const { data: settingsRows } = await admin
+    .from("reminder_settings")
+    .select("user_id,goal_min,goal_max");
+
+  const settingsMap = new Map(
+    (settingsRows ?? []).map((row) => [
+      row.user_id,
+      { goal_min: row.goal_min ?? 5, goal_max: row.goal_max ?? 10 }
+    ])
+  );
+
   const notificationRows = users.map((u) => ({
     user_id: u.id,
     title: "Weekly job goal",
-    body: "Apply to 5-10 jobs today. Review drafts marked READY_TO_REVIEW before submitting."
+    body: `Apply to ${settingsMap.get(u.id)?.goal_min ?? 5}-${settingsMap.get(u.id)?.goal_max ?? 10} jobs today. Review drafts marked READY_TO_REVIEW before submitting.`
   }));
 
   const { error: insertError } = await admin.from("notifications").insert(notificationRows);
@@ -38,7 +49,14 @@ export async function GET(req: Request) {
 
   await admin
     .from("reminder_settings")
-    .upsert(users.map((u) => ({ user_id: u.id, last_reminded_at: new Date().toISOString() })));
+    .upsert(
+      users.map((u) => ({
+        user_id: u.id,
+        goal_min: settingsMap.get(u.id)?.goal_min ?? 5,
+        goal_max: settingsMap.get(u.id)?.goal_max ?? 10,
+        last_reminded_at: new Date().toISOString()
+      }))
+    );
 
   return NextResponse.json({ ok: true, users: users.length });
 }

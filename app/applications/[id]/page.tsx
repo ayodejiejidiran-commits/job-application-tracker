@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { APPLICATION_STATUSES } from "@/lib/status";
+import { DraftActions } from "@/app/applications/[id]/draft-actions";
 
 type AppData = {
   id: string;
@@ -41,7 +42,7 @@ type JobData = {
 
 type DraftData = {
   cover_letter: string;
-  answers: Record<string, string>;
+  answers: Record<string, unknown>;
 } | null;
 
 type MatchData = {
@@ -118,6 +119,8 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
         </a>
       </p>
 
+      <DraftActions jobUrl={job.url} coverLetter={typedDraft?.cover_letter ?? ""} answers={typedDraft?.answers ?? {}} />
+
       <div className="card" style={{ marginBottom: 16 }}>
         <h2>Status: {typedApp.status}</h2>
         <form action={`/api/applications/${id}/draft`} method="post" style={{ display: "inline-block", marginRight: 8 }}>
@@ -183,7 +186,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
 
       <div className="card">
         <h2>Draft</h2>
-        <p className="small">Generated from your stored resume content only.</p>
+        <p className="small">Generated from your stored resume content only. One-page resume limits are enforced.</p>
 
         <h3>Cover Letter</h3>
         <pre style={{ whiteSpace: "pre-wrap", lineHeight: 1.45 }}>{typedDraft?.cover_letter ?? "No draft generated yet."}</pre>

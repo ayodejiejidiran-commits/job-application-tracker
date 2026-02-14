@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -43,6 +44,9 @@ export default function NewJobPage() {
       <h1>Add Job</h1>
       <p className="small">
         Paste a job link and description. The app creates an application in DRAFT and computes a resume match.
+      </p>
+      <p className="small">
+        Tip: update <Link href="/criteria">Job Criteria</Link> first so scoring includes titles, locations, keywords, and years of experience.
       </p>
 
       <form

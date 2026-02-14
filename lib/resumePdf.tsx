@@ -1,6 +1,7 @@
 import React from "react";
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { ResumeJSON } from "@/lib/resumeMatch";
+import { trimResumeToOnePage } from "@/lib/resumeOnePage";
 
 const styles = StyleSheet.create({
   page: { padding: 28, fontSize: 10, lineHeight: 1.25 },
@@ -10,27 +11,8 @@ const styles = StyleSheet.create({
   bullet: { marginLeft: 10, marginBottom: 2 }
 });
 
-function trimToOnePage(resume: ResumeJSON) {
-  const copy: ResumeJSON = structuredClone(resume);
-
-  copy.experiences = (copy.experiences ?? []).slice(0, 3).map((e) => ({
-    ...e,
-    bullets: (e.bullets ?? []).slice(0, 3).map((b) =>
-      b.length > 120 ? `${b.slice(0, 117)}...` : b
-    )
-  }));
-
-  copy.skills = (copy.skills ?? []).slice(0, 12);
-
-  if (copy.summary && copy.summary.length > 260) {
-    copy.summary = `${copy.summary.slice(0, 257)}...`;
-  }
-
-  return copy;
-}
-
 export function ResumeOnePagePDF({ resume }: { resume: ResumeJSON }) {
-  const r = trimToOnePage(resume);
+  const r = trimResumeToOnePage(resume);
 
   return (
     <Document>

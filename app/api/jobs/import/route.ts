@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { supabaseServer } from "@/lib/supabase/server";
 import { matchResumeToJob, type ResumeJSON } from "@/lib/resumeMatch";
+import { clampMatchScore, scoreJob, type Criteria } from "@/lib/match";
 
 const importSchema = z.object({
   source: z.enum(["linkedin", "indeed", "glassdoor", "other"]).default("other"),
@@ -55,30 +56,75 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: appErr?.message ?? "Unable to create application" }, { status: 400 });
   }
 
-  const { data: resumeRow } = await sb
-    .from("resume_versions")
-    .select("id,resume_json")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const [{ data: resumeRow }, { data: profileRow }, { data: criteriaRow }] = await Promise.all([
+    sb
+      .from("resume_versions")
+      .select("id,resume_json")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    sb.from("profiles").select("years_experience").eq("user_id", user.id).maybeSingle(),
+    sb
+      .from("job_criteria")
+      .select("titles,locations,remote_only,min_years,max_years,include_keywords,exclude_keywords")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+  ]);
 
   if (resumeRow?.resume_json) {
-    const match = matchResumeToJob(resumeRow.resume_json as ResumeJSON, {
+    const resume = resumeRow.resume_json as ResumeJSON;
+    const resumeMatch = matchResumeToJob(resume, {
       title: job.title,
       company: job.company,
       location: job.location,
       description: job.description
     });
 
+    const criteria = (criteriaRow
+      ? {
+          titles: criteriaRow.titles ?? [],
+          locations: criteriaRow.locations ?? [],
+          remote_only: criteriaRow.remote_only ?? false,
+          min_years: criteriaRow.min_years ?? 0,
+          max_years: criteriaRow.max_years ?? 50,
+          include_keywords: criteriaRow.include_keywords ?? [],
+          exclude_keywords: criteriaRow.exclude_keywords ?? []
+        }
+      : null) as Criteria | null;
+
+    const yearsExp = profileRow?.years_experience ?? resume.yearsExp ?? 0;
+    const criteriaScoreRaw = criteria
+      ? scoreJob(
+          { title: job.title, location: job.location, description: job.description },
+          criteria,
+          yearsExp
+        )
+      : resumeMatch.score;
+    const criteriaScore = clampMatchScore(criteriaScoreRaw);
+    const finalScore = criteria
+      ? clampMatchScore(resumeMatch.score * 0.75 + criteriaScore * 0.25)
+      : resumeMatch.score;
+
+    const evidence = {
+      ...resumeMatch.evidence,
+      __criteria: [
+        `Years experience: ${yearsExp}`,
+        `Criteria score: ${criteriaScore}`,
+        criteria ? "Criteria profile: active" : "Criteria profile: not set"
+      ]
+    };
+
     await sb.from("job_matches").upsert(
       {
         user_id: user.id,
         job_id: job.id,
-        score: match.score,
-        matched_keywords: match.matched_keywords,
-        missing_keywords: match.missing_keywords,
-        evidence: match.evidence
+        score: finalScore,
+        matched_keywords: resumeMatch.matched_keywords,
+        missing_keywords: resumeMatch.missing_keywords,
+        evidence
       },
       { onConflict: "user_id,job_id" }
     );

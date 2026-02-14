@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 import { generateCoverLetter, generateShortAnswers } from "@/lib/draft";
 import type { ResumeJSON } from "@/lib/resumeMatch";
+import { trimResumeToOnePage } from "@/lib/resumeOnePage";
 
 type JobRow = {
   title: string;
@@ -49,7 +50,7 @@ async function generate(req: Request, id: string) {
     return NextResponse.json({ error: "Application not found" }, { status: 404 });
   }
 
-  const resume = (resumeRow?.resume_json ?? {}) as ResumeJSON;
+  const resume = trimResumeToOnePage((resumeRow?.resume_json ?? {}) as ResumeJSON);
   const fullName = profile?.full_name ?? resume.name ?? "Candidate";
   const yearsExp = profile?.years_experience ?? resume.yearsExp ?? 0;
 
@@ -62,11 +63,14 @@ async function generate(req: Request, id: string) {
     resume
   });
 
-  const answers = generateShortAnswers({
-    resume,
-    yearsExp,
-    role: job.title
-  });
+  const answers = {
+    ...generateShortAnswers({
+      resume,
+      yearsExp,
+      role: job.title
+    }),
+    one_page_resume_enforced: "true"
+  };
 
   const { error: draftError } = await sb.from("drafts").upsert(
     {
