@@ -39,7 +39,7 @@ create table if not exists job_criteria (
 create table if not exists jobs (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  source text not null check (source in ('linkedin', 'indeed', 'glassdoor', 'other')),
+  source text not null check (source in ('linkedin', 'indeed', 'glassdoor', 'remotive', 'arbeitnow', 'usajobs', 'other')),
   title text not null,
   company text,
   location text,
@@ -114,6 +114,50 @@ create table if not exists reminder_settings (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists job_discovery_runs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  started_at timestamptz not null default now(),
+  finished_at timestamptz,
+  sources text[] not null default '{}',
+  inserted_count int not null default 0,
+  skipped_count int not null default 0,
+  error text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists discovery_sources_config (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  discovery_enabled boolean not null default true,
+  enable_remotive boolean not null default true,
+  enable_arbeitnow boolean not null default true,
+  enable_usajobs boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table jobs
+  drop constraint if exists jobs_source_check;
+
+alter table jobs
+  add constraint jobs_source_check
+  check (source in ('linkedin', 'indeed', 'glassdoor', 'remotive', 'arbeitnow', 'usajobs', 'other'));
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'jobs_user_url_unique'
+  ) then
+    alter table jobs add constraint jobs_user_url_unique unique (user_id, url);
+  end if;
+end $$;
+
+create index if not exists idx_job_discovery_runs_user_started_at
+on job_discovery_runs (user_id, started_at desc);
+
 alter table profiles enable row level security;
 alter table job_criteria enable row level security;
 alter table jobs enable row level security;
@@ -123,6 +167,8 @@ alter table drafts enable row level security;
 alter table job_matches enable row level security;
 alter table notifications enable row level security;
 alter table reminder_settings enable row level security;
+alter table job_discovery_runs enable row level security;
+alter table discovery_sources_config enable row level security;
 
 drop policy if exists profiles_owner on profiles;
 create policy profiles_owner on profiles
@@ -160,6 +206,14 @@ drop policy if exists reminders_owner on reminder_settings;
 create policy reminders_owner on reminder_settings
 for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+drop policy if exists discovery_runs_owner on job_discovery_runs;
+create policy discovery_runs_owner on job_discovery_runs
+for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists discovery_sources_owner on discovery_sources_config;
+create policy discovery_sources_owner on discovery_sources_config
+for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
 drop trigger if exists set_profiles_updated_at on profiles;
 create trigger set_profiles_updated_at before update on profiles
 for each row execute function public.set_updated_at();
@@ -186,4 +240,12 @@ for each row execute function public.set_updated_at();
 
 drop trigger if exists set_reminder_settings_updated_at on reminder_settings;
 create trigger set_reminder_settings_updated_at before update on reminder_settings
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_job_discovery_runs_updated_at on job_discovery_runs;
+create trigger set_job_discovery_runs_updated_at before update on job_discovery_runs
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_discovery_sources_config_updated_at on discovery_sources_config;
+create trigger set_discovery_sources_config_updated_at before update on discovery_sources_config
 for each row execute function public.set_updated_at();

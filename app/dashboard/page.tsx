@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
+import { FindJobsButton } from "@/app/dashboard/find-jobs-button";
 
 type RawJob = {
   id: string;
@@ -9,6 +10,7 @@ type RawJob = {
   location: string | null;
   source: string;
   url: string;
+  posted_at: string | null;
 };
 
 type RawApplication = {
@@ -85,6 +87,10 @@ function startOfWeekIso() {
   return copy.toISOString();
 }
 
+function recentCutoffIso(days: number) {
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+}
+
 export default async function DashboardPage({
   searchParams
 }: {
@@ -102,11 +108,13 @@ export default async function DashboardPage({
   const sourceParam = paramValue("source");
   const minScoreParam = paramValue("minScore");
   const queryParam = paramValue("q");
+  const recentParam = paramValue("recent");
 
   const statusFilter = statusParam && statusParam !== "ALL" ? statusParam : "ALL";
   const sourceFilter = sourceParam && sourceParam !== "ALL" ? sourceParam : "ALL";
   const minScore = Number(minScoreParam ?? "0");
   const search = (queryParam ?? "").toLowerCase().trim();
+  const recentOnly = recentParam !== "false";
 
   const sb = await supabaseServer();
   const {
@@ -127,7 +135,7 @@ export default async function DashboardPage({
   ] = await Promise.all([
     sb
       .from("applications")
-      .select("id,status,updated_at,jobs(id,title,company,location,source,url)")
+      .select("id,status,updated_at,jobs(id,title,company,location,source,url,posted_at)")
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false }),
     sb.from("reminder_settings").select("goal_min,goal_max").eq("user_id", user.id).maybeSingle(),
@@ -171,6 +179,8 @@ export default async function DashboardPage({
     matchMap = new Map(((matches ?? []) as unknown as MatchRow[]).map((m) => [m.job_id, m.score]));
   }
 
+  const recentCutoff = recentCutoffIso(14);
+
   const filteredRows = rows.filter((row) => {
     const job = row.job;
     if (!job) return false;
@@ -180,6 +190,14 @@ export default async function DashboardPage({
     if (statusFilter !== "ALL" && row.status !== statusFilter) return false;
     if (sourceFilter !== "ALL" && job.source !== sourceFilter) return false;
     if (score < minScore) return false;
+    if (recentOnly) {
+      const posted = job.posted_at;
+      if (posted) {
+        if (posted < recentCutoff.slice(0, 10)) return false;
+      } else if (row.updated_at < recentCutoff) {
+        return false;
+      }
+    }
 
     if (search) {
       const hay = `${job.title} ${job.company ?? ""} ${job.location ?? ""}`.toLowerCase();
@@ -228,6 +246,7 @@ export default async function DashboardPage({
             </Link>
           </nav>
           <div className="top-actions">
+            <FindJobsButton />
             <Link className="add-btn" href="/jobs/new">
               + Add Job
             </Link>
@@ -294,9 +313,15 @@ export default async function DashboardPage({
             <option value="linkedin">LinkedIn</option>
             <option value="indeed">Indeed</option>
             <option value="glassdoor">Glassdoor</option>
+            <option value="remotive">Remotive</option>
+            <option value="arbeitnow">Arbeitnow</option>
             <option value="other">Other</option>
           </select>
           <input type="number" name="minScore" min={0} max={100} defaultValue={String(minScore)} placeholder="Min score" />
+          <select name="recent" defaultValue={recentOnly ? "true" : "false"}>
+            <option value="true">Last 14 days</option>
+            <option value="false">All time</option>
+          </select>
           <button type="submit">Apply Filters</button>
         </form>
 

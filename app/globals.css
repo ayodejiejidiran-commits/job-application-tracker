@@ -225,6 +225,12 @@ button.alt {
   gap: 10px;
 }
 
+.discover-inline {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
 .add-btn {
   text-decoration: none;
   background: #0b57d0;
@@ -396,7 +402,7 @@ button.alt {
 .filter-row {
   margin-bottom: 12px;
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 120px auto;
+  grid-template-columns: 2fr 1fr 1fr 120px 140px auto;
   gap: 8px;
 }
 

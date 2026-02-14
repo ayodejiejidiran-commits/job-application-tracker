@@ -5,7 +5,7 @@ import { matchResumeToJob, type ResumeJSON } from "@/lib/resumeMatch";
 import { clampMatchScore, scoreJob, type Criteria } from "@/lib/match";
 
 const importSchema = z.object({
-  source: z.enum(["linkedin", "indeed", "glassdoor", "other"]).default("other"),
+  source: z.enum(["linkedin", "indeed", "glassdoor", "remotive", "arbeitnow", "usajobs", "other"]).default("other"),
   title: z.string().min(1, "title is required"),
   company: z.string().optional().nullable(),
   location: z.string().optional().nullable(),
