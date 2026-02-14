@@ -7,15 +7,43 @@ type AppData = {
   id: string;
   status: string;
   notes: string | null;
-  jobs: {
-    id: string;
-    title: string;
-    company: string | null;
-    location: string | null;
-    source: string;
-    url: string;
-    description: string | null;
-  } | null;
+  jobs:
+    | {
+        id: string;
+        title: string;
+        company: string | null;
+        location: string | null;
+        source: string;
+        url: string;
+        description: string | null;
+      }
+    | {
+        id: string;
+        title: string;
+        company: string | null;
+        location: string | null;
+        source: string;
+        url: string;
+        description: string | null;
+      }[]
+    | null;
+};
+
+type JobData = {
+  id: string;
+  title: string;
+  company: string | null;
+  location: string | null;
+  source: string;
+  url: string;
+  description: string | null;
+};
+
+type AppViewData = {
+  id: string;
+  status: string;
+  notes: string | null;
+  jobs: JobData | null;
 };
 
 type DraftData = {
@@ -29,6 +57,11 @@ type MatchData = {
   missing_keywords: string[];
   evidence: Record<string, string[]>;
 } | null;
+
+function normalizeJob(jobs: AppData["jobs"]): JobData | null {
+  if (!jobs) return null;
+  return Array.isArray(jobs) ? jobs[0] ?? null : jobs;
+}
 
 export default async function ApplicationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -55,7 +88,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
 
   if (!app) notFound();
 
-  const job = (app as AppData).jobs;
+  const job = normalizeJob((app as AppData).jobs);
   if (!job) notFound();
 
   const [{ data: draft }, { data: match }] = await Promise.all([
@@ -92,7 +125,7 @@ export default async function ApplicationDetailPage({ params }: { params: Promis
       </p>
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <h2>Status: {(app as AppData).status}</h2>
+        <h2>Status: {(app as AppViewData).status}</h2>
         <form action={`/api/applications/${id}/draft`} method="post" style={{ display: "inline-block", marginRight: 8 }}>
           <button type="submit">Generate / Refresh Draft</button>
         </form>

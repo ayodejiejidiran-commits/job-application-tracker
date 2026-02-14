@@ -3,6 +3,18 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { generateCoverLetter, generateShortAnswers } from "@/lib/draft";
 import type { ResumeJSON } from "@/lib/resumeMatch";
 
+type JobRow = {
+  title: string;
+  company: string | null;
+  description: string | null;
+};
+
+type ApplicationRow = {
+  id: string;
+  job_id: string;
+  jobs: JobRow | JobRow[] | null;
+};
+
 async function generate(req: Request, id: string) {
   const sb = await supabaseServer();
   const {
@@ -30,7 +42,10 @@ async function generate(req: Request, id: string) {
       .maybeSingle()
   ]);
 
-  if (!application || !application.jobs) {
+  const typedApplication = application as ApplicationRow | null;
+  const job = Array.isArray(typedApplication?.jobs) ? typedApplication?.jobs[0] : typedApplication?.jobs;
+
+  if (!typedApplication || !job) {
     return NextResponse.json({ error: "Application not found" }, { status: 404 });
   }
 
@@ -41,16 +56,16 @@ async function generate(req: Request, id: string) {
   const coverLetter = generateCoverLetter({
     fullName,
     yearsExp,
-    jobTitle: application.jobs.title,
-    company: application.jobs.company ?? "Hiring",
-    jobDescription: application.jobs.description ?? "",
+    jobTitle: job.title,
+    company: job.company ?? "Hiring",
+    jobDescription: job.description ?? "",
     resume
   });
 
   const answers = generateShortAnswers({
     resume,
     yearsExp,
-    role: application.jobs.title
+    role: job.title
   });
 
   const { error: draftError } = await sb.from("drafts").upsert(
