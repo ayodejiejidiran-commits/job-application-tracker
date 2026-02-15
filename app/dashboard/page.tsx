@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { FindJobsButton } from "@/app/dashboard/find-jobs-button";
 import { RefreshListingsButton } from "@/app/dashboard/refresh-listings-button";
+import { isRemoteLocation, isUnitedStatesJob } from "@/lib/discovery/usFilters";
 
 type RawJob = {
   id: string;
@@ -12,6 +13,7 @@ type RawJob = {
   source: string;
   url: string;
   posted_at: string | null;
+  description: string | null;
 };
 
 type RawApplication = {
@@ -110,12 +112,19 @@ export default async function DashboardPage({
   const minScoreParam = paramValue("minScore");
   const queryParam = paramValue("q");
   const recentParam = paramValue("recent");
+  const locationTypeParam = paramValue("locationType");
+  const cityParam = paramValue("city");
+  const usOnlyParam = paramValue("usOnly");
 
   const statusFilter = statusParam && statusParam !== "ALL" ? statusParam : "ALL";
   const sourceFilter = sourceParam && sourceParam !== "ALL" ? sourceParam : "ALL";
   const minScore = Number(minScoreParam ?? "0");
   const search = (queryParam ?? "").toLowerCase().trim();
   const recentOnly = recentParam !== "false";
+  const locationType =
+    locationTypeParam === "REMOTE" || locationTypeParam === "CITY" ? locationTypeParam : "ALL";
+  const cityFilter = (cityParam ?? "").toLowerCase().trim();
+  const usOnly = usOnlyParam !== "false";
 
   const sb = await supabaseServer();
   const {
@@ -136,7 +145,7 @@ export default async function DashboardPage({
   ] = await Promise.all([
     sb
       .from("applications")
-      .select("id,status,updated_at,jobs(id,title,company,location,source,url,posted_at)")
+      .select("id,status,updated_at,jobs(id,title,company,location,source,url,posted_at,description)")
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false }),
     sb.from("reminder_settings").select("goal_min,goal_max").eq("user_id", user.id).maybeSingle(),
@@ -187,10 +196,24 @@ export default async function DashboardPage({
     if (!job) return false;
 
     const score = matchMap.get(job.id) ?? 0;
+    const remote = isRemoteLocation({
+      title: job.title,
+      location: job.location,
+      description: job.description
+    });
+    const usJob = isUnitedStatesJob({
+      title: job.title,
+      location: job.location,
+      description: job.description
+    });
 
     if (statusFilter !== "ALL" && row.status !== statusFilter) return false;
     if (sourceFilter !== "ALL" && job.source !== sourceFilter) return false;
     if (score < minScore) return false;
+    if (usOnly && !usJob) return false;
+    if (locationType === "REMOTE" && !remote) return false;
+    if (locationType === "CITY" && remote) return false;
+    if (cityFilter && !(job.location ?? "").toLowerCase().includes(cityFilter)) return false;
     if (recentOnly) {
       const posted = job.posted_at;
       if (!posted) return false;
@@ -320,6 +343,16 @@ export default async function DashboardPage({
             <option value="other">Other</option>
           </select>
           <input type="number" name="minScore" min={0} max={100} defaultValue={String(minScore)} placeholder="Min score" />
+          <select name="locationType" defaultValue={locationType}>
+            <option value="ALL">All Job Types</option>
+            <option value="REMOTE">Remote Only</option>
+            <option value="CITY">City (On-site/Hybrid)</option>
+          </select>
+          <input name="city" placeholder="City (e.g., Austin)" defaultValue={cityParam ?? ""} />
+          <select name="usOnly" defaultValue={usOnly ? "true" : "false"}>
+            <option value="true">United States only</option>
+            <option value="false">Any country</option>
+          </select>
           <select name="recent" defaultValue={recentOnly ? "true" : "false"}>
             <option value="true">Last 14 days</option>
             <option value="false">All time</option>

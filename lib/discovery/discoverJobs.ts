@@ -2,6 +2,7 @@ import { clampMatchScore, scoreJob, type Criteria } from "@/lib/match";
 import { matchResumeToJob, type ResumeJSON } from "@/lib/resumeMatch";
 import { fetchArbeitnowJobs } from "@/lib/discovery/sources/arbeitnow";
 import { fetchRemotiveJobs } from "@/lib/discovery/sources/remotive";
+import { isUnitedStatesJob } from "@/lib/discovery/usFilters";
 import type {
   DiscoveredJob,
   DiscoveryContext,
@@ -80,6 +81,17 @@ export async function discoverJobs(args: {
     for (const rawJob of sourceResult.jobs) {
       const normalizedUrl = normalizeUrl(rawJob.url);
       if (!normalizedUrl) {
+        skipped_count += 1;
+        continue;
+      }
+
+      if (
+        !isUnitedStatesJob({
+          title: rawJob.title,
+          location: rawJob.location,
+          description: rawJob.description
+        })
+      ) {
         skipped_count += 1;
         continue;
       }
