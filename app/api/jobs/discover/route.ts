@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { supabaseServer } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
 import { runDiscoveryForUser } from "@/lib/discovery/runDiscoveryForUser";
 import type { DiscoverySourceId } from "@/lib/discovery/types";
 
@@ -30,11 +29,9 @@ export async function POST(req: Request) {
   const sources = (parsed.data.sources ?? undefined) as DiscoverySourceId[] | undefined;
   const force = parsed.data.force ?? false;
 
-  const admin = supabaseAdmin();
-
   try {
     const summary = await runDiscoveryForUser({
-      admin,
+      admin: sb,
       user_id: user.id,
       source_override: sources,
       ignore_rate_limit: force
