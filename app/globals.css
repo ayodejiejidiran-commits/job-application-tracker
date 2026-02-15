@@ -1,11 +1,13 @@
 :root {
-  --ink: #13203a;
-  --muted: #6f7a8f;
-  --line: #dce2ee;
-  --panel: #ffffff;
-  --bg: #eef2f8;
-  --blue: #1060e5;
-  --blue-strong: #0a4fcc;
+  --ink: #e8eefc;
+  --muted: #9aa7c8;
+  --line: #2d3442;
+  --panel: #1d2230;
+  --panel-strong: #171c28;
+  --bg: linear-gradient(180deg, #161a25 0%, #0f121c 100%);
+  --blue: #2d7dff;
+  --blue-strong: #1f5fd4;
+  --accent: #ffb347;
 }
 
 * {
@@ -20,12 +22,12 @@ body {
 
 body {
   color: var(--ink);
-  background: linear-gradient(180deg, #eef3fb 0%, #e8edf6 100%);
-  font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg);
+  font-family: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
 
 a {
-  color: #0b57d0;
+  color: var(--ink);
 }
 
 .container {
@@ -50,7 +52,7 @@ a {
 .table td {
   text-align: left;
   padding: 10px 8px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid #222836;
   vertical-align: top;
 }
 
@@ -81,25 +83,27 @@ input,
 textarea,
 select {
   width: 100%;
-  border: 1px solid var(--line);
+  border: 1px solid #2f3747;
   border-radius: 10px;
   padding: 10px;
   margin: 6px 0 12px;
-  background: #fff;
+  background: #1a1f2b;
+  color: var(--ink);
 }
 
 button {
-  border: 1px solid #0b57d0;
+  border: 1px solid var(--blue-strong);
   border-radius: 10px;
-  background: #0b57d0;
+  background: var(--blue);
   color: #fff;
-  padding: 8px 12px;
+  padding: 10px 12px;
   cursor: pointer;
 }
 
 button.alt {
-  background: #fff;
-  color: #0b57d0;
+  background: transparent;
+  color: var(--ink);
+  border-color: #3a4457;
 }
 
 .auth-wrap {
@@ -150,38 +154,52 @@ button.alt {
 .job-shell {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 78px minmax(0, 1fr);
+  grid-template-columns: 260px minmax(0, 1fr);
 }
 
 .job-sidebar {
-  background: linear-gradient(180deg, var(--blue) 0%, var(--blue-strong) 100%);
-  padding: 16px 12px;
+  background: linear-gradient(180deg, #1b2432 0%, #131926 100%);
+  padding: 18px 16px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 16px;
+  gap: 18px;
+  border-right: 1px solid #202838;
 }
 
 .job-brand {
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.12);
   color: #fff;
   font-weight: 700;
   display: grid;
   place-items: center;
 }
 
-.nav-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.35);
+.sidebar-nav {
+  display: grid;
+  gap: 8px;
 }
 
-.nav-dot.active {
-  background: #fff;
+.sidebar-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.sidebar-filters {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid #222b3a;
+  border-radius: 14px;
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.filter-label {
+  font-size: 12px;
+  color: #d2dcf7;
+  margin: 0;
 }
 
 .job-content {
@@ -190,8 +208,8 @@ button.alt {
 
 .job-topbar {
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.75);
-  border: 1px solid var(--line);
+  background: var(--panel);
+  border: 1px solid #202838;
   padding: 14px 16px;
   display: flex;
   align-items: center;
@@ -207,15 +225,15 @@ button.alt {
 }
 
 .tab {
-  color: #506082;
+  color: #c7d4f4;
   font-weight: 600;
   font-size: 14px;
   text-decoration: none;
 }
 
 .tab.active {
-  color: #0d1d3a;
-  border-bottom: 2px solid #1b67e2;
+  color: #fff;
+  border-bottom: 2px solid var(--blue);
   padding-bottom: 4px;
 }
 
@@ -228,35 +246,36 @@ button.alt {
 .discover-inline {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
 }
 
 .add-btn {
   text-decoration: none;
-  background: #0b57d0;
+  background: var(--blue);
   color: #fff;
-  padding: 9px 12px;
+  padding: 10px 12px;
   border-radius: 10px;
-  border: 1px solid #0b57d0;
+  border: 1px solid var(--blue-strong);
   font-size: 14px;
 }
 
 .logout-btn {
-  background: #fff;
-  color: #0b57d0;
+  background: transparent;
+  color: #d0dcfb;
+  border: 1px solid #2f3747;
 }
 
 .board-scroll {
   display: grid;
-  grid-template-columns: repeat(4, minmax(265px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(4, minmax(260px, 1fr));
+  gap: 16px;
   overflow-x: auto;
   padding-bottom: 10px;
 }
 
 .board-column {
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid var(--line);
+  background: var(--panel);
+  border: 1px solid #202838;
   border-radius: 14px;
   min-height: 420px;
   display: flex;
@@ -265,7 +284,7 @@ button.alt {
 
 .column-head {
   padding: 12px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid #222a3a;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -274,12 +293,13 @@ button.alt {
 .column-head h2 {
   margin: 0;
   font-size: 16px;
+  color: #eaf1ff;
 }
 
 .column-head span {
   font-size: 12px;
-  color: #3e4d69;
-  background: #e7eefb;
+  color: #c7d4f4;
+  background: #253149;
   border-radius: 999px;
   padding: 3px 8px;
 }
@@ -291,8 +311,8 @@ button.alt {
 }
 
 .job-card-panel {
-  background: #fff;
-  border: 1px solid var(--line);
+  background: #222a39;
+  border: 1px solid #2c3548;
   border-radius: 12px;
   padding: 12px;
 }
@@ -301,18 +321,18 @@ button.alt {
   margin: 0 0 6px;
   font-size: 17px;
   font-weight: 700;
-  color: #1a2746;
+  color: #f4f7ff;
 }
 
 .job-company {
   margin: 0;
   font-weight: 600;
-  color: #33405a;
+  color: #c1cee9;
 }
 
 .job-meta {
   margin: 5px 0 8px;
-  color: #6a7690;
+  color: #92a2c6;
   font-size: 13px;
 }
 
@@ -324,17 +344,17 @@ button.alt {
 }
 
 .pill {
-  border: 1px solid #cad5ea;
-  color: #1d355f;
-  background: #f0f5ff;
+  border: 1px solid #30415f;
+  color: #d6e1ff;
+  background: #1f2a40;
   font-size: 12px;
   border-radius: 999px;
   padding: 4px 8px;
 }
 
 .pill.subtle {
-  background: #f6f8fc;
-  color: #56637e;
+  background: #1b2435;
+  color: #a7b5d4;
 }
 
 .card-actions {
@@ -351,15 +371,15 @@ button.alt {
 }
 
 .metric-card {
-  background: rgba(255, 255, 255, 0.84);
-  border: 1px solid var(--line);
+  background: var(--panel);
+  border: 1px solid #222a3a;
   border-radius: 12px;
   padding: 12px;
 }
 
 .metric-label {
   margin: 0 0 6px;
-  color: #506082;
+  color: #c3cfee;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -369,14 +389,14 @@ button.alt {
   width: 100%;
   height: 8px;
   border-radius: 999px;
-  background: #e6edf9;
+  background: #202a3a;
   overflow: hidden;
   margin: 8px 0;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #3d7bf5 0%, #0a58da 100%);
+  background: linear-gradient(90deg, #2d7dff 0%, #1f5fd4 100%);
 }
 
 .goal-form {
@@ -400,10 +420,7 @@ button.alt {
 }
 
 .filter-row {
-  margin-bottom: 12px;
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 120px 140px auto;
-  gap: 8px;
+  display: none;
 }
 
 .filter-row input,
@@ -428,9 +445,10 @@ button.alt {
 
   .job-sidebar {
     flex-direction: row;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 12px;
     padding: 12px;
+    overflow-x: auto;
   }
 
   .job-content {
