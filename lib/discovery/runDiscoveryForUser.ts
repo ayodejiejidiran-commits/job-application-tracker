@@ -13,6 +13,7 @@ type DiscoveryRunSummary = {
   skipped_count: number;
   top_matches: Array<{ title: string; company: string | null; url: string; score: number; source: string }>;
   source_errors: string[];
+  source_counts: Array<{ source: string; jobs: number; error?: string | null }>;
   rate_limited: boolean;
   rate_limit_until: string | null;
 };

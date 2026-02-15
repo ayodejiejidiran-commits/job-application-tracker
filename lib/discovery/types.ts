@@ -39,4 +39,5 @@ export type DiscoverySummary = {
   matches: DiscoveryMatch[];
   source_results: DiscoverySourceResult[];
   skipped_count: number;
+  fetched_count?: number;
 };
