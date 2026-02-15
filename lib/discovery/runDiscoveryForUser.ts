@@ -53,6 +53,7 @@ async function blendApyHubScore(args: {
       company: string | null;
       location: string | null;
       description: string | null;
+      posted_at: string | null;
     };
     evidence: Record<string, string[]>;
   }>;
