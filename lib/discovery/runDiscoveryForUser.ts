@@ -105,6 +105,7 @@ export async function runDiscoveryForUser(args: {
       skipped_count: 0,
       top_matches: [],
       source_errors: [],
+      source_counts: [],
       rate_limited: false,
       rate_limit_until: null
     };
@@ -132,6 +133,7 @@ export async function runDiscoveryForUser(args: {
       skipped_count: 0,
       top_matches: [],
       source_errors: ["No discovery sources enabled."],
+      source_counts: [],
       rate_limited: false,
       rate_limit_until: null
     };
@@ -158,6 +160,7 @@ export async function runDiscoveryForUser(args: {
           skipped_count: 0,
           top_matches: [],
           source_errors: [],
+          source_counts: [],
           rate_limited: true,
           rate_limit_until: toIso(next)
         };
@@ -330,6 +333,12 @@ export async function runDiscoveryForUser(args: {
 
     if (blended.error) source_errors.push(`apyhub: ${blended.error}`);
 
+    const source_counts = discovery.source_results.map((result) => ({
+      source: result.source,
+      jobs: result.jobs.length,
+      error: result.error ?? null
+    }));
+
     if (runId) {
       await admin
         .from("job_discovery_runs")
@@ -356,6 +365,7 @@ export async function runDiscoveryForUser(args: {
         source: match.job.source
       })),
       source_errors,
+      source_counts,
       rate_limited: false,
       rate_limit_until: null
     };

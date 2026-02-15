@@ -13,6 +13,7 @@ type DiscoverResponse = {
     reactivated_count?: number;
     skipped_count: number;
     source_errors: string[];
+    source_counts?: Array<{ source: string; jobs: number; error?: string | null }>;
   };
 };
 
@@ -54,8 +55,16 @@ export function FindJobsButton() {
       const reactivated = payload.summary?.reactivated_count ?? 0;
       const skipped = payload.summary?.skipped_count ?? 0;
       const errors = payload.summary?.source_errors?.length ? ` Source errors: ${payload.summary.source_errors.join(" | ")}` : "";
+      const counts =
+        payload.summary?.source_counts?.length
+          ? ` Sources: ${payload.summary.source_counts
+              .map((c) => `${c.source}:${c.jobs}${c.error ? ` err:${c.error}` : ""}`)
+              .join(" / ")}`
+          : "";
 
-      setStatus(`Discovery done. Fetched ${fetched}, inserted ${inserted}, reactivated ${reactivated}, skipped ${skipped}.${errors}`);
+      setStatus(
+        `Discovery done. Fetched ${fetched}, inserted ${inserted}, reactivated ${reactivated}, skipped ${skipped}.${errors} ${counts}`
+      );
       router.refresh();
     } catch {
       setStatus("Discovery failed due to a network error.");
