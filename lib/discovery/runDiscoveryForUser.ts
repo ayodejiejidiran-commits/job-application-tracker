@@ -47,6 +47,7 @@ async function blendApyHubScore(args: {
   matches: Array<{
     score: number;
     job: {
+      source: DiscoverySourceId;
       url: string;
       title: string;
       company: string | null;
