@@ -54,17 +54,8 @@ export function FindJobsButton() {
       const inserted = payload.summary?.inserted_count ?? 0;
       const reactivated = payload.summary?.reactivated_count ?? 0;
       const skipped = payload.summary?.skipped_count ?? 0;
-      const errors = payload.summary?.source_errors?.length ? ` Source errors: ${payload.summary.source_errors.join(" | ")}` : "";
-      const counts =
-        payload.summary?.source_counts?.length
-          ? ` Sources: ${payload.summary.source_counts
-              .map((c) => `${c.source}:${c.jobs}${c.error ? ` err:${c.error}` : ""}`)
-              .join(" / ")}`
-          : "";
-
-      setStatus(
-        `Discovery done. Fetched ${fetched}, inserted ${inserted}, reactivated ${reactivated}, skipped ${skipped}.${errors} ${counts}`
-      );
+      const counts = (payload.summary?.source_counts ?? []).map((c) => `${c.source}:${c.jobs}`).join(" | ");
+      setStatus(`Fetched ${fetched} • Added ${inserted} • Reactivated ${reactivated} • Skipped ${skipped}${counts ? ` • ${counts}` : ""}`);
       router.refresh();
     } catch {
       setStatus("Discovery failed due to a network error.");

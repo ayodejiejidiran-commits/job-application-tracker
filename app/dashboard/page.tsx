@@ -256,10 +256,86 @@ export default async function DashboardPage({
     <main className="job-shell">
       <aside className="job-sidebar">
         <div className="job-brand">JT</div>
-        <div className="nav-dot active" />
-        <div className="nav-dot" />
-        <div className="nav-dot" />
-        <div className="nav-dot" />
+        <nav className="sidebar-nav">
+          <Link className={`tab ${view === "board" ? "active" : ""}`} href="/dashboard?view=board">
+            Board
+          </Link>
+          <Link className={`tab ${view === "table" ? "active" : ""}`} href="/dashboard?view=table">
+            Table
+          </Link>
+          <Link className={`tab ${criteria ? "active" : ""}`} href="/criteria">
+            Criteria
+          </Link>
+        </nav>
+        <div className="sidebar-actions">
+          <FindJobsButton />
+          <RefreshListingsButton />
+          <Link className="add-btn" href="/jobs/new">
+            + Add Job
+          </Link>
+          <form action="/api/auth/logout" method="post" style={{ marginTop: 8 }}>
+            <button className="logout-btn" type="submit">
+              Sign Out
+            </button>
+          </form>
+        </div>
+
+        <form method="get" className="sidebar-filters">
+          <input type="hidden" name="view" value={view} />
+          <label className="filter-label">Search</label>
+          <input name="q" placeholder="Search title/company" defaultValue={queryParam ?? ""} />
+
+          <label className="filter-label">Status</label>
+          <select name="status" defaultValue={statusFilter}>
+            <option value="ALL">All</option>
+            <option value="DRAFT">Draft</option>
+            <option value="READY_TO_REVIEW">Ready</option>
+            <option value="APPLIED">Applied</option>
+            <option value="ARCHIVED">Archived</option>
+          </select>
+
+          <label className="filter-label">Source</label>
+          <select name="source" defaultValue={sourceFilter}>
+            <option value="ALL">All</option>
+            <option value="linkedin">LinkedIn</option>
+            <option value="indeed">Indeed</option>
+            <option value="glassdoor">Glassdoor</option>
+            <option value="remotive">Remotive</option>
+            <option value="arbeitnow">Arbeitnow</option>
+            <option value="usajobs">USAJobs</option>
+            <option value="serpapi">SerpApi</option>
+            <option value="other">Other</option>
+          </select>
+
+          <label className="filter-label">Min score</label>
+          <input type="number" name="minScore" min={0} max={100} defaultValue={String(minScore)} />
+
+          <label className="filter-label">Job type</label>
+          <select name="locationType" defaultValue={locationType}>
+            <option value="ALL">All</option>
+            <option value="REMOTE">Remote</option>
+            <option value="CITY">City/Hybrid</option>
+          </select>
+
+          <label className="filter-label">City</label>
+          <input name="city" placeholder="e.g. Austin" defaultValue={cityParam ?? ""} />
+
+          <label className="filter-label">United States only</label>
+          <select name="usOnly" defaultValue={usOnly ? "true" : "false"}>
+            <option value="true">Yes</option>
+            <option value="false">All</option>
+          </select>
+
+          <label className="filter-label">Recency</label>
+          <select name="recent" defaultValue={recentOnly ? "true" : "false"}>
+            <option value="true">Last 14 days</option>
+            <option value="false">All time</option>
+          </select>
+
+          <button type="submit" style={{ marginTop: 12 }}>
+            Apply Filters
+          </button>
+        </form>
       </aside>
 
       <section className="job-content">
@@ -275,18 +351,6 @@ export default async function DashboardPage({
               Job Criteria
             </Link>
           </nav>
-          <div className="top-actions">
-            <FindJobsButton />
-            <RefreshListingsButton />
-            <Link className="add-btn" href="/jobs/new">
-              + Add Job
-            </Link>
-            <form action="/api/auth/logout" method="post">
-              <button className="logout-btn" type="submit">
-                Sign Out
-              </button>
-            </form>
-          </div>
         </header>
 
         <section className="metrics-row">
@@ -328,44 +392,6 @@ export default async function DashboardPage({
             )}
           </article>
         </section>
-
-        <form method="get" className="filter-row">
-          <input type="hidden" name="view" value={view} />
-          <input name="q" placeholder="Search title/company/location" defaultValue={queryParam ?? ""} />
-          <select name="status" defaultValue={statusFilter}>
-            <option value="ALL">All Statuses</option>
-            <option value="DRAFT">Draft</option>
-            <option value="READY_TO_REVIEW">Ready to Review</option>
-            <option value="APPLIED">Applied</option>
-            <option value="ARCHIVED">Archived</option>
-          </select>
-          <select name="source" defaultValue={sourceFilter}>
-            <option value="ALL">All Sources</option>
-            <option value="linkedin">LinkedIn</option>
-            <option value="indeed">Indeed</option>
-            <option value="glassdoor">Glassdoor</option>
-            <option value="remotive">Remotive</option>
-            <option value="arbeitnow">Arbeitnow</option>
-            <option value="usajobs">USAJobs</option>
-            <option value="other">Other</option>
-          </select>
-          <input type="number" name="minScore" min={0} max={100} defaultValue={String(minScore)} placeholder="Min score" />
-          <select name="locationType" defaultValue={locationType}>
-            <option value="ALL">All Job Types</option>
-            <option value="REMOTE">Remote Only</option>
-            <option value="CITY">City (On-site/Hybrid)</option>
-          </select>
-          <input name="city" placeholder="City (e.g., Austin)" defaultValue={cityParam ?? ""} />
-          <select name="usOnly" defaultValue={usOnly ? "true" : "false"}>
-            <option value="true">United States only</option>
-            <option value="false">Any country</option>
-          </select>
-          <select name="recent" defaultValue={recentOnly ? "true" : "false"}>
-            <option value="true">Last 14 days</option>
-            <option value="false">All time</option>
-          </select>
-          <button type="submit">Apply Filters</button>
-        </form>
 
         {view === "board" ? (
           <div className="board-scroll">
