@@ -3,7 +3,7 @@ import { discoverJobs } from "@/lib/discovery/discoverJobs";
 import { loadOrCreateResumeAndCriteria } from "@/lib/discovery/resume/loadResumeAndCriteria";
 import { runApyHubResumeJobMatch } from "@/lib/discovery/scoring/apyhubResumeMatch";
 import { isLikelyEnglishJob, isUnitedStatesJob } from "@/lib/discovery/usFilters";
-import type { DiscoverySourceId } from "@/lib/discovery/types";
+import type { DiscoveryMatch, DiscoverySourceId } from "@/lib/discovery/types";
 
 type DiscoveryRunSummary = {
   run_id: string | null;
@@ -44,19 +44,7 @@ function mapDiscoverySourceToDbSource(source: DiscoverySourceId) {
 
 async function blendApyHubScore(args: {
   resume_pdf_path: string | null;
-  matches: Array<{
-    score: number;
-    job: {
-      source: DiscoverySourceId;
-      url: string;
-      title: string;
-      company: string | null;
-      location: string | null;
-      description: string | null;
-      posted_at: string | null;
-    };
-    evidence: Record<string, string[]>;
-  }>;
+  matches: DiscoveryMatch[];
 }) {
   if (!args.resume_pdf_path || !process.env.APYHUB_API_KEY) {
     return { matches: args.matches, error: null as string | null };
