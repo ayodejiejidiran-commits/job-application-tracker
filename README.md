@@ -11,7 +11,7 @@ Free starter infrastructure for tracking and drafting job applications across Li
 - Shows applications in board and table views, with filters and weekly progress
 - Sends Monday reminders (5-10 applications goal) via Vercel Cron + in-app notifications
 - Includes a Chrome extension skeleton to save jobs into your tracker
-- Zero-manual-entry discovery finds job posting URLs from compliant APIs (Remotive + Arbeitnow)
+- Zero-manual-entry discovery finds job posting URLs from compliant APIs (SerpApi + Remotive + USAJobs)
 
 ## Important
 This project does **not** auto-submit applications on job boards.
@@ -32,6 +32,7 @@ It keeps you in review control and supports one-click workflow from the tracker 
 ## Zero-manual-entry discovery
 - Dashboard now includes `Find Jobs` and `Refresh Listings` buttons.
 - The feature uses resume-driven criteria and calls compliant public sources:
+  - SerpApi Google Jobs API (enabled when `SERPAPI_API_KEY` is set)
   - Remotive Jobs API
   - USAJobs API (optional; enabled when env is set)
   - Arbeitnow Job Board API (excluded automatically in US-only mode)
@@ -82,6 +83,8 @@ It keeps you in review control and supports one-click workflow from the tracker 
 - `RESUME_PDF_DIR` default `/mnt/data`
 - `RESUME_PDF_PATHS` optional comma-separated absolute PDF paths
 - `DEFAULT_RESUME_JSON_PATH` default `./supabase/resume.sample.json`
+- `SERPAPI_API_KEY` enables SerpApi Google Jobs source
+- `APYHUB_API_KEY` enables ApyHub resume/job external score blending
 - `USAJOBS_USER_AGENT_EMAIL` optional; enables USAJobs source by default
 - `USAJOBS_AUTH_KEY` optional key for USAJobs requests
 

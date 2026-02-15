@@ -1,11 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { discoverJobs } from "@/lib/discovery/discoverJobs";
 import { loadOrCreateResumeAndCriteria } from "@/lib/discovery/resume/loadResumeAndCriteria";
+import { runApyHubResumeJobMatch } from "@/lib/discovery/scoring/apyhubResumeMatch";
 import { isLikelyEnglishJob, isUnitedStatesJob } from "@/lib/discovery/usFilters";
 import type { DiscoverySourceId } from "@/lib/discovery/types";
 
 type DiscoveryRunSummary = {
   run_id: string | null;
+  fetched_count: number;
   inserted_count: number;
   reactivated_count: number;
   skipped_count: number;
@@ -15,12 +17,73 @@ type DiscoveryRunSummary = {
   rate_limit_until: string | null;
 };
 
-const DEFAULT_SOURCES: DiscoverySourceId[] = process.env.USAJOBS_USER_AGENT_EMAIL
-  ? ["remotive", "usajobs"]
-  : ["remotive"];
+type SourceConfigRow = {
+  discovery_enabled?: boolean | null;
+  enable_remotive?: boolean | null;
+  enable_arbeitnow?: boolean | null;
+  enable_usajobs?: boolean | null;
+  enable_serpapi?: boolean | null;
+} | null;
+
+function defaultSources() {
+  const sources: DiscoverySourceId[] = [];
+  if (process.env.SERPAPI_API_KEY) sources.push("serpapi");
+  sources.push("remotive");
+  if (process.env.USAJOBS_USER_AGENT_EMAIL) sources.push("usajobs");
+  return [...new Set(sources)];
+}
 
 function toIso(date: Date) {
   return date.toISOString();
+}
+
+function mapDiscoverySourceToDbSource(source: DiscoverySourceId) {
+  if (source === "serpapi") return "other";
+  return source;
+}
+
+async function blendApyHubScore(args: {
+  resume_pdf_path: string | null;
+  matches: Array<{
+    score: number;
+    job: {
+      title: string;
+      company: string | null;
+      location: string | null;
+      description: string | null;
+    };
+    evidence: Record<string, string[]>;
+  }>;
+}) {
+  if (!args.resume_pdf_path || !process.env.APYHUB_API_KEY) {
+    return { matches: args.matches, error: null as string | null };
+  }
+
+  try {
+    const top = args.matches.slice(0, 5);
+    for (const entry of top) {
+      const jobText = `${entry.job.title}\n${entry.job.company ?? ""}\n${entry.job.location ?? ""}\n${entry.job.description ?? ""}`;
+      const result = await runApyHubResumeJobMatch({
+        resume_pdf_path: args.resume_pdf_path,
+        job_text: jobText
+      });
+
+      if (typeof result?.score === "number") {
+        entry.score = Math.round(entry.score * 0.7 + result.score * 0.3);
+        entry.evidence.__external = [
+          ...(entry.evidence.__external ?? []),
+          `ApyHub score: ${result.score}`
+        ];
+      }
+    }
+
+    return { matches: args.matches, error: null as string | null };
+  } catch (error) {
+    return {
+      matches: args.matches,
+      error: error instanceof Error ? error.message : "ApyHub score merge failed"
+    };
+  }
 }
 
 export async function runDiscoveryForUser(args: {
@@ -32,40 +95,20 @@ export async function runDiscoveryForUser(args: {
   const admin = args.admin;
   const userId = args.user_id;
   const usOnlyMode = process.env.DISCOVERY_US_ONLY !== "false";
-
   const rateLimitHours = Number(process.env.DISCOVERY_RATE_LIMIT_HOURS ?? "1");
 
-  let sourceConfig:
-    | {
-        discovery_enabled?: boolean | null;
-        enable_remotive?: boolean | null;
-        enable_arbeitnow?: boolean | null;
-        enable_usajobs?: boolean | null;
-      }
-    | null
-    | undefined;
-
-  const withUSAJobs = await admin
+  const { data: sourceConfigData } = await admin
     .from("discovery_sources_config")
-    .select("discovery_enabled,enable_remotive,enable_arbeitnow,enable_usajobs")
+    .select("*")
     .eq("user_id", userId)
     .maybeSingle();
-
-  if (withUSAJobs.error) {
-    const legacy = await admin
-      .from("discovery_sources_config")
-      .select("discovery_enabled,enable_remotive,enable_arbeitnow")
-      .eq("user_id", userId)
-      .maybeSingle();
-    sourceConfig = (legacy.data as typeof sourceConfig) ?? null;
-  } else {
-    sourceConfig = withUSAJobs.data as typeof sourceConfig;
-  }
+  const sourceConfig = (sourceConfigData ?? null) as SourceConfigRow;
 
   const discoveryEnabled = sourceConfig?.discovery_enabled ?? true;
   if (!discoveryEnabled) {
     return {
       run_id: null,
+      fetched_count: 0,
       inserted_count: 0,
       reactivated_count: 0,
       skipped_count: 0,
@@ -76,22 +119,23 @@ export async function runDiscoveryForUser(args: {
     };
   }
 
-  const enabledFromConfig = [
+  const enabledFromConfig: DiscoverySourceId[] = [
     sourceConfig?.enable_remotive !== false ? "remotive" : null,
     !usOnlyMode && sourceConfig?.enable_arbeitnow !== false ? "arbeitnow" : null,
-    sourceConfig?.enable_usajobs === true ? "usajobs" : null
+    process.env.USAJOBS_USER_AGENT_EMAIL && sourceConfig?.enable_usajobs !== false ? "usajobs" : null,
+    process.env.SERPAPI_API_KEY && sourceConfig?.enable_serpapi !== false ? "serpapi" : null
   ].filter((v): v is DiscoverySourceId => Boolean(v));
 
-  const hasSourceConfig = Boolean(sourceConfig);
   const enabled_sources = args.source_override?.length
     ? args.source_override
-    : hasSourceConfig && enabledFromConfig.length
+    : enabledFromConfig.length
       ? enabledFromConfig
-      : DEFAULT_SOURCES;
+      : defaultSources();
 
   if (!enabled_sources.length) {
     return {
       run_id: null,
+      fetched_count: 0,
       inserted_count: 0,
       reactivated_count: 0,
       skipped_count: 0,
@@ -117,6 +161,7 @@ export async function runDiscoveryForUser(args: {
       if (next > new Date()) {
         return {
           run_id: null,
+          fetched_count: 0,
           inserted_count: 0,
           reactivated_count: 0,
           skipped_count: 0,
@@ -154,7 +199,13 @@ export async function runDiscoveryForUser(args: {
       enabled_sources
     });
 
-    const urls = discovery.matches.map((match) => match.job.url);
+    const blended = await blendApyHubScore({
+      resume_pdf_path: context.resume_pdf_path ?? null,
+      matches: discovery.matches
+    });
+
+    const discoveredMatches = blended.matches;
+    const urls = discoveredMatches.map((match) => match.job.url);
     const existingUrls = new Set<string>();
 
     if (urls.length) {
@@ -165,17 +216,15 @@ export async function runDiscoveryForUser(args: {
         .in("url", urls);
 
       for (const row of existingRows ?? []) {
-        if (row.url) {
-          existingUrls.add(row.url);
-        }
+        if (row.url) existingUrls.add(row.url);
       }
     }
 
-    const newMatches = discovery.matches.filter((match) => !existingUrls.has(match.job.url));
+    const newMatches = discoveredMatches.filter((match) => !existingUrls.has(match.job.url));
 
-    const jobsToUpsert = discovery.matches.map((match) => ({
+    const jobsToUpsert = discoveredMatches.map((match) => ({
       user_id: userId,
-      source: match.job.source,
+      source: mapDiscoverySourceToDbSource(match.job.source),
       title: match.job.title,
       company: match.job.company,
       location: match.job.location,
@@ -184,22 +233,23 @@ export async function runDiscoveryForUser(args: {
       posted_at: match.job.posted_at ? match.job.posted_at.slice(0, 10) : null
     }));
 
-    let insertedJobRows: Array<{ id: string; url: string }> = [];
+    let upsertedJobRows: Array<{ id: string; url: string }> = [];
     let reactivated_count = 0;
+
     if (jobsToUpsert.length) {
-      const { data: inserted, error: jobInsertError } = await admin
+      const { data: upserted, error: jobUpsertError } = await admin
         .from("jobs")
         .upsert(jobsToUpsert, { onConflict: "user_id,url" })
         .select("id,url");
 
-      if (jobInsertError) {
-        throw new Error(`Failed to insert discovered jobs: ${jobInsertError.message}`);
+      if (jobUpsertError) {
+        throw new Error(`Failed to insert discovered jobs: ${jobUpsertError.message}`);
       }
 
-      insertedJobRows = (inserted ?? []) as Array<{ id: string; url: string }>;
+      upsertedJobRows = (upserted ?? []) as Array<{ id: string; url: string }>;
 
       await admin.from("applications").upsert(
-        insertedJobRows.map((job) => ({
+        upsertedJobRows.map((job) => ({
           user_id: userId,
           job_id: job.id,
           status: "DRAFT"
@@ -215,15 +265,15 @@ export async function runDiscoveryForUser(args: {
         })
         .eq("user_id", userId)
         .eq("status", "ARCHIVED")
-        .in("job_id", insertedJobRows.map((row) => row.id))
+        .in("job_id", upsertedJobRows.map((row) => row.id))
         .select("id");
 
       reactivated_count = (reactivatedRows ?? []).length;
     }
 
-    const urlToJobId = new Map(insertedJobRows.map((row) => [row.url, row.id]));
+    const urlToJobId = new Map(upsertedJobRows.map((row) => [row.url, row.id]));
 
-    const matchRows = newMatches
+    const matchRows = discoveredMatches
       .map((match) => {
         const jobId = urlToJobId.get(match.job.url);
         if (!jobId) return null;
@@ -243,7 +293,6 @@ export async function runDiscoveryForUser(args: {
       await admin.from("job_matches").upsert(matchRows, { onConflict: "user_id,job_id" });
     }
 
-    // Keep board clean: archive stale non-US/non-English drafts from earlier runs.
     const { data: existingDrafts } = await admin
       .from("applications")
       .select("id,status,jobs(title,location,description)")
@@ -254,6 +303,7 @@ export async function runDiscoveryForUser(args: {
       .filter((row) => {
         const job = Array.isArray(row.jobs) ? row.jobs[0] : row.jobs;
         if (!job) return false;
+
         const us = isUnitedStatesJob({
           title: job.title,
           location: job.location,
@@ -280,11 +330,14 @@ export async function runDiscoveryForUser(args: {
         .in("id", toArchive);
     }
 
+    const fetched_count = discoveredMatches.length;
     const inserted_count = newMatches.length;
-    const skipped_count = discovery.skipped_count + (discovery.matches.length - inserted_count);
+    const skipped_count = discovery.skipped_count + (fetched_count - inserted_count);
     const source_errors = discovery.source_results
       .filter((result) => Boolean(result.error))
       .map((result) => `${result.source}: ${result.error}`);
+
+    if (blended.error) source_errors.push(`apyhub: ${blended.error}`);
 
     if (runId) {
       await admin
@@ -300,10 +353,11 @@ export async function runDiscoveryForUser(args: {
 
     return {
       run_id: runId,
+      fetched_count,
       inserted_count,
       reactivated_count,
       skipped_count,
-      top_matches: discovery.matches.slice(0, 10).map((match) => ({
+      top_matches: discoveredMatches.slice(0, 10).map((match) => ({
         title: match.job.title,
         company: match.job.company,
         url: match.job.url,

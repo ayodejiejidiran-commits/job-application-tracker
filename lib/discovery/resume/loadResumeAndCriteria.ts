@@ -10,6 +10,7 @@ type DiscoveryContextData = {
   resume: ResumeJSON;
   criteria: Criteria;
   years_experience: number;
+  resume_pdf_path: string | null;
 };
 
 function dedupe(values: string[]) {
@@ -68,6 +69,10 @@ export async function loadOrCreateResumeAndCriteria(admin: SupabaseClient, userI
 
   let resume = (resumeRow?.resume_json ?? null) as ResumeJSON | null;
   let resumeText: string | undefined;
+  let resumePdfPath: string | null =
+    typeof resumeRow?.pdf_path === "string" && path.isAbsolute(resumeRow.pdf_path)
+      ? resumeRow.pdf_path
+      : null;
 
   if (!hasResumeData(resume)) {
     const parsed = await parseLatestResumePdf({
@@ -77,6 +82,7 @@ export async function loadOrCreateResumeAndCriteria(admin: SupabaseClient, userI
     if (parsed) {
       resume = parsed.resume_json;
       resumeText = parsed.text;
+      resumePdfPath = parsed.path;
 
       await admin.from("resume_versions").insert({
         user_id: userId,
@@ -124,6 +130,7 @@ export async function loadOrCreateResumeAndCriteria(admin: SupabaseClient, userI
   return {
     resume,
     criteria,
-    years_experience
+    years_experience,
+    resume_pdf_path: resumePdfPath
   };
 }

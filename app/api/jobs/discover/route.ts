@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 
 const payloadSchema = z
   .object({
-    sources: z.array(z.enum(["remotive", "arbeitnow", "usajobs"])).optional(),
+    sources: z.array(z.enum(["remotive", "arbeitnow", "usajobs", "serpapi"])).optional(),
     force: z.boolean().optional()
   })
   .default({});

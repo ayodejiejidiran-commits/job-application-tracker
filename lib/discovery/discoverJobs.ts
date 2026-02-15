@@ -2,6 +2,7 @@ import { clampMatchScore, scoreJob, type Criteria } from "@/lib/match";
 import { matchResumeToJob, type ResumeJSON } from "@/lib/resumeMatch";
 import { fetchArbeitnowJobs } from "@/lib/discovery/sources/arbeitnow";
 import { fetchRemotiveJobs } from "@/lib/discovery/sources/remotive";
+import { fetchSerpApiJobs } from "@/lib/discovery/sources/serpapi";
 import { fetchUSAJobs } from "@/lib/discovery/sources/usajobs";
 import { isLikelyEnglishJob, isUnitedStatesJob } from "@/lib/discovery/usFilters";
 import type {
@@ -16,7 +17,8 @@ import type {
 const SOURCE_FETCHERS: Record<DiscoverySourceId, (ctx: DiscoveryContext) => Promise<DiscoverySourceResult>> = {
   remotive: fetchRemotiveJobs,
   arbeitnow: fetchArbeitnowJobs,
-  usajobs: fetchUSAJobs
+  usajobs: fetchUSAJobs,
+  serpapi: fetchSerpApiJobs
 };
 
 function normalizeUrl(url: string) {

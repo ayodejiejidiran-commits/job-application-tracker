@@ -1,4 +1,4 @@
-export type DiscoverySourceId = "remotive" | "arbeitnow" | "usajobs";
+export type DiscoverySourceId = "remotive" | "arbeitnow" | "usajobs" | "serpapi";
 
 export type DiscoveredJob = {
   source: DiscoverySourceId;

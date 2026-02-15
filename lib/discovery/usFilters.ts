@@ -100,7 +100,9 @@ export function isUnitedStatesJob(input: LocationInput) {
     if (hasNonUSHint(locationText) || hasNonUSHint(descriptionText)) return false;
 
     const loc = normalize(locationText);
-    if (loc === "remote" || loc === "remote only" || loc === "") return true;
+    if (loc === "remote" || loc === "remote only" || loc === "" || loc.includes("worldwide") || loc.includes("anywhere")) {
+      return true;
+    }
     return false;
   }
 
