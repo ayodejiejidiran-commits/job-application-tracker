@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { FindJobsButton } from "@/app/dashboard/find-jobs-button";
 import { RefreshListingsButton } from "@/app/dashboard/refresh-listings-button";
-import { isRemoteLocation, isUnitedStatesJob } from "@/lib/discovery/usFilters";
+import { isLikelyEnglishJob, isRemoteLocation, isUnitedStatesJob } from "@/lib/discovery/usFilters";
 
 type RawJob = {
   id: string;
@@ -206,10 +206,16 @@ export default async function DashboardPage({
       location: job.location,
       description: job.description
     });
+    const englishJob = isLikelyEnglishJob({
+      title: job.title,
+      location: job.location,
+      description: job.description
+    });
 
     if (statusFilter !== "ALL" && row.status !== statusFilter) return false;
     if (sourceFilter !== "ALL" && job.source !== sourceFilter) return false;
     if (score < minScore) return false;
+    if (!englishJob) return false;
     if (usOnly && !usJob) return false;
     if (locationType === "REMOTE" && !remote) return false;
     if (locationType === "CITY" && remote) return false;

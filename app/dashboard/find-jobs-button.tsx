@@ -29,7 +29,7 @@ export function FindJobsButton() {
       const response = await fetch("/api/jobs/discover", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({})
+        body: JSON.stringify({ force: true })
       });
 
       const payload = (await response.json().catch(() => ({}))) as DiscoverResponse;

@@ -2,7 +2,7 @@ import { clampMatchScore, scoreJob, type Criteria } from "@/lib/match";
 import { matchResumeToJob, type ResumeJSON } from "@/lib/resumeMatch";
 import { fetchArbeitnowJobs } from "@/lib/discovery/sources/arbeitnow";
 import { fetchRemotiveJobs } from "@/lib/discovery/sources/remotive";
-import { isUnitedStatesJob } from "@/lib/discovery/usFilters";
+import { isLikelyEnglishJob, isUnitedStatesJob } from "@/lib/discovery/usFilters";
 import type {
   DiscoveredJob,
   DiscoveryContext,
@@ -96,6 +96,17 @@ export async function discoverJobs(args: {
         continue;
       }
 
+      if (
+        !isLikelyEnglishJob({
+          title: rawJob.title,
+          location: rawJob.location,
+          description: rawJob.description
+        })
+      ) {
+        skipped_count += 1;
+        continue;
+      }
+
       if (!postedWithinWindow(rawJob.posted_at, context.posted_after)) {
         skipped_count += 1;
         continue;
@@ -130,8 +141,11 @@ export async function discoverJobs(args: {
       const finalScore = clampMatchScore(resumeMatch.score * 0.7 + criteriaScore * 0.3);
       const includeKeywords = args.criteria.include_keywords ?? [];
       const includeHit = includeKeywords.length ? containsKeyword(text, includeKeywords) : true;
+      const titleAligned = (args.criteria.titles ?? []).length
+        ? containsKeyword(rawJob.title, args.criteria.titles ?? [])
+        : true;
 
-      if (finalScore < 30 && !includeHit) {
+      if ((finalScore < 30 && !includeHit) || !titleAligned) {
         skipped_count += 1;
         continue;
       }

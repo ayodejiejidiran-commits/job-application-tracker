@@ -28,7 +28,7 @@ export async function runDiscoveryForUser(args: {
   const admin = args.admin;
   const userId = args.user_id;
 
-  const rateLimitHours = Number(process.env.DISCOVERY_RATE_LIMIT_HOURS ?? "6");
+  const rateLimitHours = Number(process.env.DISCOVERY_RATE_LIMIT_HOURS ?? "1");
 
   const { data: sourceConfig } = await admin
     .from("discovery_sources_config")

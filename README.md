@@ -36,7 +36,7 @@ It keeps you in review control and supports one-click workflow from the tracker 
   - Arbeitnow Job Board API
 - It inserts new job URLs into `jobs` and creates `DRAFT` applications automatically.
 - Discovery enforces `posted_at` within the last 14 days.
-- Discovery filters to United States jobs only (including US-remote jobs).
+- Discovery filters to United States jobs only (including US-remote jobs) and excludes non-English postings.
 - No server-side scraping of LinkedIn/Indeed/Glassdoor is used.
 - Manual trigger endpoint: `POST /api/jobs/discover`
 - Daily cron endpoint: `GET /api/cron/daily-discover`
@@ -51,6 +51,10 @@ It keeps you in review control and supports one-click workflow from the tracker 
 - Remote only
 - City filter (for on-site/hybrid city targeting)
 - Last 14 days (default on)
+
+## Discovery rate limit
+- Default cooldown is `1` hour (`DISCOVERY_RATE_LIMIT_HOURS`).
+- Manual `Find Jobs` requests use `force=true` to bypass cooldown for on-demand refresh.
 
 ## Seed your resume JSON
 - Use `supabase/resume.sample.json` as your template.

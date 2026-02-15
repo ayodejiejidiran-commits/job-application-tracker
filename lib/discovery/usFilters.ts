@@ -24,6 +24,11 @@ function normalize(value: string) {
   return value.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
+function hasWord(text: string, term: string) {
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`\\b${escaped}\\b`, "i").test(text);
+}
+
 function hasUSLocationHint(value: string) {
   const text = normalize(value);
   if (!text) return false;
@@ -31,12 +36,10 @@ function hasUSLocationHint(value: string) {
   if (
     text.includes("united states") ||
     text.includes("united states of america") ||
-    text.includes("usa") ||
-    text.includes("u.s.") ||
-    text.includes("us only") ||
-    text.includes("u.s. only") ||
-    text.includes("us-based") ||
-    text.includes("u.s.-based")
+    hasWord(text, "usa") ||
+    hasWord(text, "us-only") ||
+    hasWord(text, "us based") ||
+    hasWord(text, "u.s.")
   ) {
     return true;
   }
@@ -74,4 +77,31 @@ export function isUnitedStatesJob(input: LocationInput) {
   }
 
   return hasUSLocationHint(locationText) || hasUSLocationHint(descriptionText);
+}
+
+const GERMAN_MARKERS = [
+  "w/m/d",
+  "für",
+  "münchen",
+  "berlin",
+  "hamburg",
+  "köln",
+  "entwickler",
+  "deutschland",
+  "germany",
+  "arbeitsort",
+  "vollzeit",
+  "teilzeit"
+];
+
+export function isLikelyEnglishJob(input: LocationInput) {
+  const combined = normalize(`${input.title ?? ""} ${input.location ?? ""} ${input.description ?? ""}`);
+  if (!combined) return false;
+
+  if (/[äöüß]/i.test(combined)) return false;
+  for (const marker of GERMAN_MARKERS) {
+    if (combined.includes(marker)) return false;
+  }
+
+  return true;
 }
