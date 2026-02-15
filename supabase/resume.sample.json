@@ -1,16 +1,52 @@
 {
-  "name": "Your Name",
-  "yearsExp": 3,
-  "summary": "Product-focused professional with experience delivering measurable improvements.",
-  "skills": ["SQL", "APIs", "Jira", "Confluence", "Figma"],
-  "competencies": ["Roadmapping", "User Stories", "Stakeholder Management", "Agile"],
+  "name": "Ayodeji Ejidiran",
+  "yearsExp": 4,
+  "summary": "Product Manager with 4 years of experience delivering digital products across B2C and enterprise platforms with measurable outcomes.",
+  "skills": [
+    "SQL",
+    "REST/HTTP APIs",
+    "Postman",
+    "Jira",
+    "Confluence",
+    "Figma",
+    "AWS",
+    "Azure",
+    "GCP",
+    "A/B testing",
+    "Analytics"
+  ],
+  "competencies": [
+    "Product Management",
+    "Roadmap",
+    "Backlog",
+    "User Stories",
+    "Acceptance Criteria",
+    "Stakeholder Management",
+    "VOC"
+  ],
   "experiences": [
     {
-      "company": "Company A",
+      "company": "The Home Depot",
       "title": "Product Manager",
       "bullets": [
-        "Led cross-functional delivery for a customer-facing feature and improved engagement by 12%.",
-        "Used SQL and analytics dashboards to prioritize backlog decisions."
+        "Led end-to-end web and mobile product delivery, improving engagement by 25 percent and conversion by 14 percent.",
+        "Used funnel analysis and A/B testing to prioritize roadmap decisions and validate feature impact."
+      ]
+    },
+    {
+      "company": "Interior Logic Group",
+      "title": "Digital Product Manager",
+      "bullets": [
+        "Owned enterprise application delivery, improving cross-system data reliability through monitoring and QA.",
+        "Reduced data processing time by 99.7 percent through workflow automation and process redesign."
+      ]
+    },
+    {
+      "company": "Systems Intelligence",
+      "title": "Product Manager",
+      "bullets": [
+        "Translated business and customer needs into user stories and acceptance criteria for API-first products.",
+        "Partnered with engineering, design, and stakeholders to deliver iterative roadmap milestones."
       ]
     }
   ]

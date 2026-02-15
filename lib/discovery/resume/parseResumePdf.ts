@@ -149,14 +149,34 @@ async function pathExists(filePath: string) {
 }
 
 async function pickNewest(paths: string[]) {
+  const negativeTokens = ["cover letter", "template", "outcome", "consumer welfare", "automobile industry"];
+  const positiveTokens = ["resume", "product manager", "pm", "digital product manager"];
+
+  const filenameScore = (filePath: string) => {
+    const name = path.basename(filePath).toLowerCase();
+    let score = 0;
+
+    for (const token of positiveTokens) {
+      if (name.includes(token)) score += 20;
+    }
+    for (const token of negativeTokens) {
+      if (name.includes(token)) score -= 40;
+    }
+    return score;
+  };
+
   const stats = await Promise.all(
     paths.map(async (filePath) => ({
       filePath,
-      stat: await fs.stat(filePath)
+      stat: await fs.stat(filePath),
+      score: filenameScore(filePath)
     }))
   );
 
-  stats.sort((a, b) => b.stat.mtimeMs - a.stat.mtimeMs);
+  stats.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return b.stat.mtimeMs - a.stat.mtimeMs;
+  });
   return stats[0]?.filePath ?? null;
 }
 

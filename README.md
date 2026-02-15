@@ -30,11 +30,12 @@ It keeps you in review control and supports one-click workflow from the tracker 
    - `npm run dev`
 
 ## Zero-manual-entry discovery
-- Dashboard now includes a `Find Jobs` button.
+- Dashboard now includes `Find Jobs` and `Refresh Listings` buttons.
 - The feature uses resume-driven criteria and calls compliant public sources:
   - Remotive Jobs API
   - Arbeitnow Job Board API
 - It inserts new job URLs into `jobs` and creates `DRAFT` applications automatically.
+- Discovery enforces `posted_at` within the last 14 days.
 - No server-side scraping of LinkedIn/Indeed/Glassdoor is used.
 - Manual trigger endpoint: `POST /api/jobs/discover`
 - Daily cron endpoint: `GET /api/cron/daily-discover`
@@ -52,6 +53,7 @@ It keeps you in review control and supports one-click workflow from the tracker 
   - Go to `/criteria`
   - Use **Resume Upload**
   - The app extracts `resume_json`, stores it in `resume_versions`, and auto-creates `job_criteria` if missing.
+- If no resume is uploaded, discovery auto-falls back to `DEFAULT_RESUME_JSON_PATH` (`./supabase/resume.sample.json` by default).
 
 ## Deploy
 - Push to GitHub and import into Vercel
@@ -65,6 +67,7 @@ It keeps you in review control and supports one-click workflow from the tracker 
 - `DISCOVERY_RATE_LIMIT_HOURS` default `6`
 - `RESUME_PDF_DIR` default `/mnt/data`
 - `RESUME_PDF_PATHS` optional comma-separated absolute PDF paths
+- `DEFAULT_RESUME_JSON_PATH` default `./supabase/resume.sample.json`
 
 ## Add new discovery source
 - Implement source adapter under `lib/discovery/sources/`

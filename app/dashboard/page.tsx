@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { FindJobsButton } from "@/app/dashboard/find-jobs-button";
+import { RefreshListingsButton } from "@/app/dashboard/refresh-listings-button";
 
 type RawJob = {
   id: string;
@@ -192,9 +193,9 @@ export default async function DashboardPage({
     if (score < minScore) return false;
     if (recentOnly) {
       const posted = job.posted_at;
-      if (posted) {
-        if (posted < recentCutoff.slice(0, 10)) return false;
-      } else if (row.updated_at < recentCutoff) {
+      if (!posted) return false;
+      if (posted < recentCutoff.slice(0, 10)) return false;
+      if (row.updated_at < recentCutoff) {
         return false;
       }
     }
@@ -247,6 +248,7 @@ export default async function DashboardPage({
           </nav>
           <div className="top-actions">
             <FindJobsButton />
+            <RefreshListingsButton />
             <Link className="add-btn" href="/jobs/new">
               + Add Job
             </Link>

@@ -1,3 +1,5 @@
+import { promises as fs } from "node:fs";
+import path from "node:path";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Criteria } from "@/lib/match";
 import type { ResumeJSON } from "@/lib/resumeMatch";
@@ -10,7 +12,7 @@ type DiscoveryContextData = {
   years_experience: number;
 };
 
-function hasResumeData(resume: ResumeJSON | null | undefined) {
+function hasResumeData(resume: ResumeJSON | null | undefined): resume is ResumeJSON {
   if (!resume) return false;
   return Boolean(resume.summary || (resume.skills?.length ?? 0) || (resume.experiences?.length ?? 0));
 }
@@ -27,6 +29,18 @@ function mapCriteria(row: Record<string, unknown> | null | undefined): Criteria 
     include_keywords: (row.include_keywords as string[] | null) ?? [],
     exclude_keywords: (row.exclude_keywords as string[] | null) ?? []
   };
+}
+
+async function readFallbackResumeJson() {
+  const fallbackPath = process.env.DEFAULT_RESUME_JSON_PATH ?? path.join(process.cwd(), "supabase", "resume.sample.json");
+
+  try {
+    const raw = await fs.readFile(fallbackPath, "utf8");
+    const parsed = JSON.parse(raw) as ResumeJSON;
+    return hasResumeData(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function loadOrCreateResumeAndCriteria(admin: SupabaseClient, userId: string): Promise<DiscoveryContextData> {
@@ -69,10 +83,20 @@ export async function loadOrCreateResumeAndCriteria(admin: SupabaseClient, userI
     }
   }
 
-  if (!resume) {
-    throw new Error(
-      "No resume profile found. Add resume_json to resume_versions or provide readable PDF files via RESUME_PDF_PATHS/RESUME_PDF_DIR."
-    );
+  if (!hasResumeData(resume)) {
+    const fallback = await readFallbackResumeJson();
+    if (fallback) {
+      resume = fallback;
+      await admin.from("resume_versions").insert({
+        user_id: userId,
+        label: "auto-fallback",
+        resume_json: fallback
+      });
+    }
+  }
+
+  if (!hasResumeData(resume)) {
+    throw new Error("No resume profile found. Add resume_json to resume_versions or configure DEFAULT_RESUME_JSON_PATH.");
   }
 
   let criteria = mapCriteria(criteriaRow as Record<string, unknown> | null);

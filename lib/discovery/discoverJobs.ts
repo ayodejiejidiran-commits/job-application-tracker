@@ -36,9 +36,9 @@ function containsKeyword(text: string, keywords: string[]) {
 }
 
 function postedWithinWindow(postedAt: string | null, postedAfter: Date) {
-  if (!postedAt) return true;
+  if (!postedAt) return false;
   const d = new Date(postedAt);
-  if (Number.isNaN(d.getTime())) return true;
+  if (Number.isNaN(d.getTime())) return false;
   return d >= postedAfter;
 }
 
