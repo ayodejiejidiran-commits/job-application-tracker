@@ -12,6 +12,10 @@ type DiscoveryContextData = {
   years_experience: number;
 };
 
+function dedupe(values: string[]) {
+  return [...new Set(values.map((v) => v.trim().toLowerCase()).filter(Boolean))];
+}
+
 function hasResumeData(resume: ResumeJSON | null | undefined): resume is ResumeJSON {
   if (!resume) return false;
   return Boolean(resume.summary || (resume.skills?.length ?? 0) || (resume.experiences?.length ?? 0));
@@ -99,9 +103,19 @@ export async function loadOrCreateResumeAndCriteria(admin: SupabaseClient, userI
     throw new Error("No resume profile found. Add resume_json to resume_versions or configure DEFAULT_RESUME_JSON_PATH.");
   }
 
-  let criteria = mapCriteria(criteriaRow as Record<string, unknown> | null);
-  if (!criteria) {
-    criteria = deriveCriteriaFromResume(resume, resumeText);
+  const existingCriteria = mapCriteria(criteriaRow as Record<string, unknown> | null);
+  const derivedCriteria = deriveCriteriaFromResume(resume, resumeText);
+  const useResumeProfileOnly = process.env.DISCOVERY_USE_RESUME_PROFILE_ONLY !== "false";
+
+  let criteria = existingCriteria;
+  if (!criteria || useResumeProfileOnly) {
+    criteria = {
+      ...derivedCriteria,
+      exclude_keywords: dedupe([
+        ...(derivedCriteria.exclude_keywords ?? []),
+        ...(existingCriteria?.exclude_keywords ?? [])
+      ])
+    };
     await admin.from("job_criteria").insert({ user_id: userId, ...criteria });
   }
 

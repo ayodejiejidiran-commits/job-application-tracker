@@ -149,12 +149,24 @@ async function pathExists(filePath: string) {
 }
 
 async function pickNewest(paths: string[]) {
+  const preferredResumeNames = [
+    "ayodeji_ejidiran_resume_vs.pdf",
+    "ayo d. ejidiran_resume_pm.pdf",
+    "ayo d. ejidiran resume_pm.pdf",
+    "ayo d ejidiran pm.pdf",
+    "ayo e pm.pdf"
+  ];
+
   const negativeTokens = ["cover letter", "template", "outcome", "consumer welfare", "automobile industry"];
   const positiveTokens = ["resume", "product manager", "pm", "digital product manager"];
 
   const filenameScore = (filePath: string) => {
     const name = path.basename(filePath).toLowerCase();
     let score = 0;
+
+    for (const preferred of preferredResumeNames) {
+      if (name === preferred || name.includes(preferred.replace(".pdf", ""))) score += 120;
+    }
 
     for (const token of positiveTokens) {
       if (name.includes(token)) score += 20;

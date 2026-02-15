@@ -7,6 +7,7 @@ import type { DiscoverySourceId } from "@/lib/discovery/types";
 type DiscoveryRunSummary = {
   run_id: string | null;
   inserted_count: number;
+  reactivated_count: number;
   skipped_count: number;
   top_matches: Array<{ title: string; company: string | null; url: string; score: number; source: string }>;
   source_errors: string[];
@@ -14,7 +15,9 @@ type DiscoveryRunSummary = {
   rate_limit_until: string | null;
 };
 
-const DEFAULT_SOURCES: DiscoverySourceId[] = ["remotive", "arbeitnow"];
+const DEFAULT_SOURCES: DiscoverySourceId[] = process.env.USAJOBS_USER_AGENT_EMAIL
+  ? ["remotive", "usajobs"]
+  : ["remotive"];
 
 function toIso(date: Date) {
   return date.toISOString();
@@ -28,20 +31,43 @@ export async function runDiscoveryForUser(args: {
 }): Promise<DiscoveryRunSummary> {
   const admin = args.admin;
   const userId = args.user_id;
+  const usOnlyMode = process.env.DISCOVERY_US_ONLY !== "false";
 
   const rateLimitHours = Number(process.env.DISCOVERY_RATE_LIMIT_HOURS ?? "1");
 
-  const { data: sourceConfig } = await admin
+  let sourceConfig:
+    | {
+        discovery_enabled?: boolean | null;
+        enable_remotive?: boolean | null;
+        enable_arbeitnow?: boolean | null;
+        enable_usajobs?: boolean | null;
+      }
+    | null
+    | undefined;
+
+  const withUSAJobs = await admin
     .from("discovery_sources_config")
-    .select("discovery_enabled,enable_remotive,enable_arbeitnow")
+    .select("discovery_enabled,enable_remotive,enable_arbeitnow,enable_usajobs")
     .eq("user_id", userId)
     .maybeSingle();
+
+  if (withUSAJobs.error) {
+    const legacy = await admin
+      .from("discovery_sources_config")
+      .select("discovery_enabled,enable_remotive,enable_arbeitnow")
+      .eq("user_id", userId)
+      .maybeSingle();
+    sourceConfig = (legacy.data as typeof sourceConfig) ?? null;
+  } else {
+    sourceConfig = withUSAJobs.data as typeof sourceConfig;
+  }
 
   const discoveryEnabled = sourceConfig?.discovery_enabled ?? true;
   if (!discoveryEnabled) {
     return {
       run_id: null,
       inserted_count: 0,
+      reactivated_count: 0,
       skipped_count: 0,
       top_matches: [],
       source_errors: [],
@@ -52,12 +78,14 @@ export async function runDiscoveryForUser(args: {
 
   const enabledFromConfig = [
     sourceConfig?.enable_remotive !== false ? "remotive" : null,
-    sourceConfig?.enable_arbeitnow !== false ? "arbeitnow" : null
+    !usOnlyMode && sourceConfig?.enable_arbeitnow !== false ? "arbeitnow" : null,
+    sourceConfig?.enable_usajobs === true ? "usajobs" : null
   ].filter((v): v is DiscoverySourceId => Boolean(v));
 
+  const hasSourceConfig = Boolean(sourceConfig);
   const enabled_sources = args.source_override?.length
     ? args.source_override
-    : enabledFromConfig.length
+    : hasSourceConfig && enabledFromConfig.length
       ? enabledFromConfig
       : DEFAULT_SOURCES;
 
@@ -65,6 +93,7 @@ export async function runDiscoveryForUser(args: {
     return {
       run_id: null,
       inserted_count: 0,
+      reactivated_count: 0,
       skipped_count: 0,
       top_matches: [],
       source_errors: ["No discovery sources enabled."],
@@ -89,6 +118,7 @@ export async function runDiscoveryForUser(args: {
         return {
           run_id: null,
           inserted_count: 0,
+          reactivated_count: 0,
           skipped_count: 0,
           top_matches: [],
           source_errors: [],
@@ -130,18 +160,20 @@ export async function runDiscoveryForUser(args: {
     if (urls.length) {
       const { data: existingRows } = await admin
         .from("jobs")
-        .select("url")
+        .select("id,url")
         .eq("user_id", userId)
         .in("url", urls);
 
       for (const row of existingRows ?? []) {
-        if (row.url) existingUrls.add(row.url);
+        if (row.url) {
+          existingUrls.add(row.url);
+        }
       }
     }
 
     const newMatches = discovery.matches.filter((match) => !existingUrls.has(match.job.url));
 
-    const jobsToInsert = newMatches.map((match) => ({
+    const jobsToUpsert = discovery.matches.map((match) => ({
       user_id: userId,
       source: match.job.source,
       title: match.job.title,
@@ -153,10 +185,11 @@ export async function runDiscoveryForUser(args: {
     }));
 
     let insertedJobRows: Array<{ id: string; url: string }> = [];
-    if (jobsToInsert.length) {
+    let reactivated_count = 0;
+    if (jobsToUpsert.length) {
       const { data: inserted, error: jobInsertError } = await admin
         .from("jobs")
-        .upsert(jobsToInsert, { onConflict: "user_id,url" })
+        .upsert(jobsToUpsert, { onConflict: "user_id,url" })
         .select("id,url");
 
       if (jobInsertError) {
@@ -173,6 +206,19 @@ export async function runDiscoveryForUser(args: {
         })),
         { onConflict: "user_id,job_id", ignoreDuplicates: true }
       );
+
+      const { data: reactivatedRows } = await admin
+        .from("applications")
+        .update({
+          status: "DRAFT",
+          updated_at: toIso(new Date())
+        })
+        .eq("user_id", userId)
+        .eq("status", "ARCHIVED")
+        .in("job_id", insertedJobRows.map((row) => row.id))
+        .select("id");
+
+      reactivated_count = (reactivatedRows ?? []).length;
     }
 
     const urlToJobId = new Map(insertedJobRows.map((row) => [row.url, row.id]));
@@ -255,6 +301,7 @@ export async function runDiscoveryForUser(args: {
     return {
       run_id: runId,
       inserted_count,
+      reactivated_count,
       skipped_count,
       top_matches: discovery.matches.slice(0, 10).map((match) => ({
         title: match.job.title,

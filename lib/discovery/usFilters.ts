@@ -20,6 +20,16 @@ const US_STATE_ABBR = [
   "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY", "DC"
 ];
 
+const US_MAJOR_CITIES = [
+  "austin", "new york", "san francisco", "seattle", "chicago", "boston", "atlanta", "dallas",
+  "houston", "los angeles", "denver", "miami", "washington", "charlotte", "phoenix", "san diego"
+];
+
+const NON_US_MARKERS = [
+  "germany", "deutschland", "berlin", "munich", "münchen", "hamburg", "köln", "france", "spain",
+  "italy", "netherlands", "europe", "emea", "apac", "latam", "canada", "united kingdom", "uk", "ireland"
+];
+
 function normalize(value: string) {
   return value.toLowerCase().replace(/\s+/g, " ").trim();
 }
@@ -53,7 +63,17 @@ function hasUSLocationHint(value: string) {
     if (re.test(value)) return true;
   }
 
+  for (const city of US_MAJOR_CITIES) {
+    if (text.includes(city)) return true;
+  }
+
   return false;
+}
+
+function hasNonUSHint(value: string) {
+  const text = normalize(value);
+  if (!text) return false;
+  return NON_US_MARKERS.some((marker) => text.includes(marker));
 }
 
 export function isRemoteLocation(input: LocationInput) {
@@ -73,9 +93,18 @@ export function isUnitedStatesJob(input: LocationInput) {
   const remote = isRemoteLocation(input);
 
   if (remote) {
-    return hasUSLocationHint(locationText) || hasUSLocationHint(descriptionText) || hasUSLocationHint(titleText);
+    if (hasUSLocationHint(locationText) || hasUSLocationHint(descriptionText) || hasUSLocationHint(titleText)) {
+      return true;
+    }
+
+    if (hasNonUSHint(locationText) || hasNonUSHint(descriptionText)) return false;
+
+    const loc = normalize(locationText);
+    if (loc === "remote" || loc === "remote only" || loc === "") return true;
+    return false;
   }
 
+  if (hasNonUSHint(locationText) || hasNonUSHint(descriptionText)) return false;
   return hasUSLocationHint(locationText) || hasUSLocationHint(descriptionText);
 }
 

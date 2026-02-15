@@ -33,7 +33,8 @@ It keeps you in review control and supports one-click workflow from the tracker 
 - Dashboard now includes `Find Jobs` and `Refresh Listings` buttons.
 - The feature uses resume-driven criteria and calls compliant public sources:
   - Remotive Jobs API
-  - Arbeitnow Job Board API
+  - USAJobs API (optional; enabled when env is set)
+  - Arbeitnow Job Board API (excluded automatically in US-only mode)
 - It inserts new job URLs into `jobs` and creates `DRAFT` applications automatically.
 - Discovery enforces `posted_at` within the last 14 days.
 - Discovery filters to United States jobs only (including US-remote jobs) and excludes non-English postings.
@@ -75,10 +76,14 @@ It keeps you in review control and supports one-click workflow from the tracker 
   - Monday reminder cron (`/api/cron/monday-reminder`)
 
 ## Discovery env vars
-- `DISCOVERY_RATE_LIMIT_HOURS` default `6`
+- `DISCOVERY_RATE_LIMIT_HOURS` default `1`
+- `DISCOVERY_US_ONLY` default `true`
+- `DISCOVERY_USE_RESUME_PROFILE_ONLY` default `true`
 - `RESUME_PDF_DIR` default `/mnt/data`
 - `RESUME_PDF_PATHS` optional comma-separated absolute PDF paths
 - `DEFAULT_RESUME_JSON_PATH` default `./supabase/resume.sample.json`
+- `USAJOBS_USER_AGENT_EMAIL` optional; enables USAJobs source by default
+- `USAJOBS_AUTH_KEY` optional key for USAJobs requests
 
 ## Add new discovery source
 - Implement source adapter under `lib/discovery/sources/`

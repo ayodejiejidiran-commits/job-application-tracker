@@ -346,6 +346,7 @@ export default async function DashboardPage({
             <option value="glassdoor">Glassdoor</option>
             <option value="remotive">Remotive</option>
             <option value="arbeitnow">Arbeitnow</option>
+            <option value="usajobs">USAJobs</option>
             <option value="other">Other</option>
           </select>
           <input type="number" name="minScore" min={0} max={100} defaultValue={String(minScore)} placeholder="Min score" />

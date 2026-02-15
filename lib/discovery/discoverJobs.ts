@@ -2,6 +2,7 @@ import { clampMatchScore, scoreJob, type Criteria } from "@/lib/match";
 import { matchResumeToJob, type ResumeJSON } from "@/lib/resumeMatch";
 import { fetchArbeitnowJobs } from "@/lib/discovery/sources/arbeitnow";
 import { fetchRemotiveJobs } from "@/lib/discovery/sources/remotive";
+import { fetchUSAJobs } from "@/lib/discovery/sources/usajobs";
 import { isLikelyEnglishJob, isUnitedStatesJob } from "@/lib/discovery/usFilters";
 import type {
   DiscoveredJob,
@@ -14,7 +15,8 @@ import type {
 
 const SOURCE_FETCHERS: Record<DiscoverySourceId, (ctx: DiscoveryContext) => Promise<DiscoverySourceResult>> = {
   remotive: fetchRemotiveJobs,
-  arbeitnow: fetchArbeitnowJobs
+  arbeitnow: fetchArbeitnowJobs,
+  usajobs: fetchUSAJobs
 };
 
 function normalizeUrl(url: string) {
@@ -145,7 +147,7 @@ export async function discoverJobs(args: {
         ? containsKeyword(rawJob.title, args.criteria.titles ?? [])
         : true;
 
-      if ((finalScore < 30 && !includeHit) || !titleAligned) {
+      if ((finalScore < 30 && !includeHit) || (!titleAligned && finalScore < 55)) {
         skipped_count += 1;
         continue;
       }
