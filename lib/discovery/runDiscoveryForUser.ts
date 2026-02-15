@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { discoverJobs } from "@/lib/discovery/discoverJobs";
 import { loadOrCreateResumeAndCriteria } from "@/lib/discovery/resume/loadResumeAndCriteria";
+import { isLikelyEnglishJob, isUnitedStatesJob } from "@/lib/discovery/usFilters";
 import type { DiscoverySourceId } from "@/lib/discovery/types";
 
 type DiscoveryRunSummary = {
@@ -194,6 +195,43 @@ export async function runDiscoveryForUser(args: {
 
     if (matchRows.length) {
       await admin.from("job_matches").upsert(matchRows, { onConflict: "user_id,job_id" });
+    }
+
+    // Keep board clean: archive stale non-US/non-English drafts from earlier runs.
+    const { data: existingDrafts } = await admin
+      .from("applications")
+      .select("id,status,jobs(title,location,description)")
+      .eq("user_id", userId)
+      .in("status", ["DRAFT", "READY_TO_REVIEW"]);
+
+    const toArchive = (existingDrafts ?? [])
+      .filter((row) => {
+        const job = Array.isArray(row.jobs) ? row.jobs[0] : row.jobs;
+        if (!job) return false;
+        const us = isUnitedStatesJob({
+          title: job.title,
+          location: job.location,
+          description: job.description
+        });
+        const english = isLikelyEnglishJob({
+          title: job.title,
+          location: job.location,
+          description: job.description
+        });
+        return !us || !english;
+      })
+      .map((row) => row.id)
+      .filter((id): id is string => Boolean(id));
+
+    if (toArchive.length) {
+      await admin
+        .from("applications")
+        .update({
+          status: "ARCHIVED",
+          updated_at: toIso(new Date())
+        })
+        .eq("user_id", userId)
+        .in("id", toArchive);
     }
 
     const inserted_count = newMatches.length;
