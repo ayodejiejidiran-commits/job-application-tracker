@@ -131,6 +131,22 @@ export async function POST(req: Request) {
     const tplCss = template === "classic" ? classicCss : template === "minimal" ? minimalCss : modernCss;
 
     wrapped = `<!doctype html><html><head><meta charset="utf-8"/><style>${RESUME_PRINT_CSS}${tplCss}${css ?? ""}</style></head><body>${tpl(safe)}</body></html>`;
+    // Prefer external PDF API on Vercel/production to avoid Chromium/lib issues.
+    const preferPdfApi = !!process.env.PDFSHIFT_API_KEY && (!!process.env.VERCEL || process.env.NODE_ENV === "production");
+    if (preferPdfApi) {
+      const apiPdf = await renderWithPdfShift(wrapped);
+      if (apiPdf) {
+        return new NextResponse(new Uint8Array(apiPdf), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": "attachment; filename=resume.pdf"
+          }
+        });
+      }
+      console.warn("PDFShift unavailable; falling back to Chromium/minimal.");
+    }
+
 
     browser = await getBrowser();
 
