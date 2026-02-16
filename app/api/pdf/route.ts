@@ -2,9 +2,7 @@ import { NextResponse } from "next/server";
 import { sanitizeWithReport } from "@/lib/sanitize";
 import { RESUME_PRINT_CSS } from "@/lib/resumeCss";
 import { modernCss, modernWrapper } from "@/app/templates/modern";
-import { classicCss, classicWrapper } from "@/app/templates/classic";
-import { minimalCss, minimalWrapper } from "@/app/templates/minimal";
-import fs from "node:fs";
+import { classicCss, classicWrapper } from "@/app/templates/classic";import fs from "node:fs";
 import path from "node:path";
 
 export const runtime = "nodejs";
@@ -127,8 +125,8 @@ export async function POST(req: Request) {
   let browser: Awaited<ReturnType<typeof getBrowser>> = null;
   let wrapped = "";
   try {
-    const tpl = template === "classic" ? classicWrapper : template === "minimal" ? minimalWrapper : modernWrapper;
-    const tplCss = template === "classic" ? classicCss : template === "minimal" ? minimalCss : modernCss;
+    const tpl = template === "classic" ? classicWrapper : modernWrapper;
+    const tplCss = template === "classic" ? classicCss : modernCss;
 
     wrapped = `<!doctype html><html><head><meta charset="utf-8"/><style>${RESUME_PRINT_CSS}${tplCss}${css ?? ""}</style></head><body>${tpl(safe)}</body></html>`;
     // Prefer external PDF API on Vercel/production to avoid Chromium/lib issues.
