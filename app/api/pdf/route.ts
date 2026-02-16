@@ -9,33 +9,6 @@ import path from "node:path";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
-
-
-const LOCAL_CANDIDATES_DARWIN = [
-  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-  "/Applications/Chromium.app/Contents/MacOS/Chromium",
-  "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
-  "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
-];
-
-const LOCAL_CANDIDATES_LINUX = [
-  "/usr/bin/google-chrome-stable",
-  "/usr/bin/google-chrome",
-  "/usr/bin/chromium-browser",
-  "/usr/bin/chromium"
-];
-
-function findLocalChromePath(): string | null {
-  const env = process.env.LOCAL_CHROME_PATH || process.env.PUPPETEER_EXECUTABLE_PATH;
-  if (env && fs.existsSync(env)) return env;
-
-  const candidates = process.platform === "darwin" ? LOCAL_CANDIDATES_DARWIN : LOCAL_CANDIDATES_LINUX;
-  for (const p of candidates) {
-    if (fs.existsSync(p)) return p;
-  }
-  return null;
-}
-
 function buildMinimalPdf(text: string) {
   const safe = (text || "Resume").slice(0, 100).replace(/[()\\]/g, "\\$&");
   return `%PDF-1.4
@@ -61,8 +34,13 @@ startxref
 
 async function getBrowser() {
   try {
-    const chromiumMod = (await import("@sparticuz/chromium-min")) as any;
-    const chromium = chromiumMod.default ?? chromiumMod;
+    const chromiumMod = (await import("@sparticuz/chromium-min")) as unknown as ChromiumMinLike;
+    const chromium: {
+  executablePath?: (input: string) => Promise<string>;
+  args?: string[];
+  headless?: boolean;
+  defaultViewport?: { width: number; height: number } | null;
+} = chromiumMod.default ?? chromiumMod;
     const puppeteerCore = (await import("puppeteer-core")) as typeof import("puppeteer-core");
 
     const packUrl =
@@ -72,7 +50,9 @@ async function getBrowser() {
         : "https://github.com/Sparticuz/chromium/releases/download/v143.0.4/chromium-v143.0.4-pack.x64.tar");
 
     // ✅ MUST be a STRING (directory path OR remote pack tar URL)
-    const executablePath = await chromium.executablePath(packUrl);
+    const execFn = chromium.executablePath;
+    if (!execFn) return null;
+    const executablePath = await execFn(packUrl);
 
     if (!executablePath || !fs.existsSync(executablePath)) {
       return null; // caller will fallback to minimal PDF
@@ -225,3 +205,16 @@ export async function POST(req: Request) {
     }
   }
 }
+
+type ChromiumMinLike = {
+  default?: {
+    executablePath: (input: string) => Promise<string>;
+    args?: string[];
+    headless?: boolean;
+    defaultViewport?: { width: number; height: number } | null;
+  };
+  executablePath?: (input: string) => Promise<string>;
+  args?: string[];
+  headless?: boolean;
+  defaultViewport?: { width: number; height: number } | null;
+};
