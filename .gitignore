@@ -3,3 +3,28 @@ node_modules
 .env.local
 .DS_Store
 .vercel
+
+# local logs / build outputs
+build.log
+*.pdf
+*.docx
+tsconfig.tsbuildinfo
+
+# Next/Vercel
+.next/
+.vercel/
+node_modules/
+
+# build artifacts
+.next/
+tsconfig.tsbuildinfo
+build.log
+
+# local test artifacts
+test.pdf
+test.docx
+prod-test.pdf
+
+# backups
+*.bak
+tests/fixtures/*.pdf
