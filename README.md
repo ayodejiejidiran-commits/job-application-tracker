@@ -76,6 +76,13 @@ It keeps you in review control and supports one-click workflow from the tracker 
   - daily discover cron (`/api/cron/daily-discover`)
   - Monday reminder cron (`/api/cron/monday-reminder`)
 
+## Development / Tests
+- `npm run dev` — start Next.js locally
+- `npm run build` — production build
+- `npm run test:e2e` — Playwright headless E2E for `/resume` (upload, improve, tailor, export)
+  - Defaults to `AI_MOCK_MODE=1` and `E2E_AUTH_BYPASS=1` via Playwright config
+  - Uses fixture `tests/fixtures/resume.pdf`
+
 ## Discovery env vars
 - `DISCOVERY_RATE_LIMIT_HOURS` default `1`
 - `DISCOVERY_US_ONLY` default `true`

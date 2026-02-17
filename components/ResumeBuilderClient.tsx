@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+<<<<<<< HEAD
 import { TailorResumePanel } from "@/components/TailorResumePanel";
+=======
+import { TailorResumePanel } from "./TailorResumePanel";
+>>>>>>> 8ed19a7 (Move export to DOCX; remove PDF route)
 import { RESUME_PRINT_CSS } from "@/lib/resumeCss";
 import { JobPicker } from "@/components/JobPicker";
 import { ResumeUnifiedEditor } from "@/components/ResumeUnifiedEditor";
@@ -43,18 +47,30 @@ export function ResumeBuilderClient({ initialHtml, jobs = [] }: Props) {
     }
   };
 
+<<<<<<< HEAD
   async function handlePdf() {
+=======
+  async function handleDocx(sourceHtml: string) {
+>>>>>>> 8ed19a7 (Move export to DOCX; remove PDF route)
     setStatus(null);
     setDownloading(true);
     try {
       const resp = await fetch("/api/docx", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+<<<<<<< HEAD
         body: JSON.stringify({ html, template })
       });
       if (!resp.ok) {
         const t = await resp.text();
         throw new Error(t || `PDF failed (${resp.status})`);
+=======
+        body: JSON.stringify({ html: sourceHtml, filename: "resume" })
+      });
+      if (!resp.ok) {
+        const t = await resp.text();
+        throw new Error(t || `DOCX failed (${resp.status})`);
+>>>>>>> 8ed19a7 (Move export to DOCX; remove PDF route)
       }
       const blob = await resp.blob();
       const url = URL.createObjectURL(blob);
@@ -63,16 +79,27 @@ export function ResumeBuilderClient({ initialHtml, jobs = [] }: Props) {
       a.download = "resume.docx";
       a.click();
       URL.revokeObjectURL(url);
+<<<<<<< HEAD
       setStatus("PDF downloaded");
       setLastExportAt(new Date().toLocaleString());
     } catch (err: unknown) {
       setStatus(err instanceof Error ? err.message : "PDF failed");
+=======
+      setStatus("DOCX downloaded");
+      setLastExportAt(new Date().toLocaleString());
+    } catch (err: unknown) {
+      setStatus(err instanceof Error ? err.message : "DOCX failed");
+>>>>>>> 8ed19a7 (Move export to DOCX; remove PDF route)
     } finally {
       setDownloading(false);
     }
   }
 
   const warningTooLong = html.length > 8000;
+<<<<<<< HEAD
+=======
+  const [reviewHtml, setReviewHtml] = useState<string>("");
+>>>>>>> 8ed19a7 (Move export to DOCX; remove PDF route)
   const exportDisabled = !html.trim();
   const placeholderHtml = useMemo(() => "<p>Paste or upload your resume to start editing.</p>", []);
 
@@ -99,9 +126,26 @@ export function ResumeBuilderClient({ initialHtml, jobs = [] }: Props) {
         onJobDescriptionChange={setJobDescription}
         onReplace={(text) => {
           setHtml(text);
+<<<<<<< HEAD
         }}
       />
 
+=======
+          setReviewHtml(text);
+        }}
+      />
+
+      <div className="card" style={{ marginBottom: 12 }}>
+        <h2>Edit & Review</h2>
+        <ResumeUnifiedEditor
+          key="review-editor"
+          initialContent={reviewHtml || "<p>Tailored resume will appear here.</p>"}
+          onChange={(val) => setReviewHtml(val)}
+          onImprove={handleImprove}
+        />
+      </div>
+
+>>>>>>> 8ed19a7 (Move export to DOCX; remove PDF route)
       <div className="card" style={{ marginBottom: 18 }}>
         <h2>Export</h2>
         <p className="small">Exports the current editor content with the ATS-friendly CSS template.</p>
@@ -116,7 +160,16 @@ export function ResumeBuilderClient({ initialHtml, jobs = [] }: Props) {
           <option value="classic">Classic</option>
           <option value="minimal">Minimal</option>
         </select>
+<<<<<<< HEAD
         <button type="button" onClick={handlePdf} disabled={downloading || exportDisabled} aria-label="Export Word (.docx)">
+=======
+        <button
+          type="button"
+          onClick={() => handleDocx(reviewHtml || html)}
+          disabled={downloading || exportDisabled}
+          aria-label="Export Word"
+        >
+>>>>>>> 8ed19a7 (Move export to DOCX; remove PDF route)
           {downloading ? "Generating..." : "Export Word (.docx)"}
         </button>
         {warningTooLong ? <p className="error-line">Export would exceed 1 page. Trim content.</p> : null}
